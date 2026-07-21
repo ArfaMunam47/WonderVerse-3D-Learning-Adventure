@@ -257,25 +257,6 @@ git commit -m "Add amazing feature"
 git push origin feature/YourFeature
 ```
 
-5. Open a Pull Request
-
----
-
-# 📈 Future Roadmap
-
-- [ ] AI Tutor
-- [ ] Multiplayer Learning
-- [ ] VR Mode
-- [ ] AR Learning
-- [ ] Speech Recognition
-- [ ] Learning Dashboard
-- [ ] Parent Controls
-- [ ] Cloud Save
-- [ ] Leaderboards
-- [ ] More Educational Worlds
-
----
-
 # 📄 License
 
 This project is licensed under the **MIT License**.

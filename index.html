@@ -231,9 +231,11 @@
 
 <!-- ============================== GAME LAYER ============================== -->
 <div id="game-layer" class="hidden">
-  <div id="cursor" aria-hidden="true">
-    <div class="cursor-glow"></div>
-    <div class="cursor-core"></div>
+  <div id="magic-cursor" aria-hidden="true">
+    <div class="cursor-trail"></div>
+    <svg class="cursor-sparkle" viewBox="0 0 40 40">
+      <path d="M20 0 L23 17 L40 20 L23 23 L20 40 L17 23 L0 20 L17 17 Z" fill="#FFD93D"/>
+    </svg>
   </div>
   <canvas id="game-canvas"></canvas>
 

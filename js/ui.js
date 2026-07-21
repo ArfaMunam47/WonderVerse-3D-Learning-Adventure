@@ -46,11 +46,24 @@ const UI = {
     let progress = 0;
     const fill = this.el["loading-bar-fill"];
     const hintEl = this.el["loading-hint"];
+    
+    // Safety timeout: force show main menu after 8 seconds even if something fails
+    const safetyTimeout = setTimeout(() => {
+      console.warn("Loading safety timeout triggered - forcing menu display");
+      this.el["loading-screen"].classList.add("fade-out");
+      setTimeout(() => {
+        this.el["loading-screen"].classList.add("hidden");
+        this.show("main-menu");
+        if (this.app && this.app.hasSave()) this.el["btn-continue"].classList.remove("hidden");
+      }, 600);
+    }, 8000);
+    
     const timer = setInterval(() => {
       progress += 8 + Math.random() * 10;
       if (progress >= 100) {
         progress = 100;
         clearInterval(timer);
+        clearTimeout(safetyTimeout);
         setTimeout(() => {
           this.el["loading-screen"].classList.add("fade-out");
           setTimeout(() => {
@@ -352,6 +365,21 @@ const UI = {
 
 // ------------------------------- bootstrap ----------------------------------
 window.addEventListener("DOMContentLoaded", () => {
-  const app = new App();
-  UI.init(app);
+  console.log("DOM loaded, initializing app...");
+  try {
+    const app = new App();
+    console.log("App created successfully");
+    UI.init(app);
+    console.log("UI initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize app:", error);
+    // Force show main menu even if initialization fails
+    setTimeout(() => {
+      document.getElementById("loading-screen")?.classList.add("fade-out");
+      setTimeout(() => {
+        document.getElementById("loading-screen")?.classList.add("hidden");
+        document.getElementById("main-menu")?.classList.remove("hidden");
+      }, 600);
+    }, 2000);
+  }
 });

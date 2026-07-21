@@ -26,7 +26,6 @@ class App {
     this._initScene();
     this._initCameraRig();
     this._bindInput();
-    this._bindParallax();
     window.addEventListener("resize", () => this._onResize());
 
     this.paused = false;
@@ -102,8 +101,8 @@ class App {
     this.world = new World(this.scene);
     this.particles = new ParticleSystem(this.scene);
     this.particles.animSpeedMultiplier = this.settings.reducedMotion ? 0.5 : this.settings.animationSpeed;
-
-    // NEW: day/night cycle + wind + weather (rain/snow), see environment.js
+    
+    // Initialize environment system (day/night cycle, weather)
     this.environment = new Environment(this.scene, this.world.sky, this.world.sunLight, this.particles);
   }
 
@@ -198,8 +197,7 @@ class App {
       { id: "alphabet_master", label: "Alphabet Champion", test: () => uniqueCount("letter") >= GAME_DATA.alphabet.length },
       { id: "numbers_master", label: "Counting Star", test: () => uniqueCount("number") >= GAME_DATA.numbers.length },
       { id: "explorer_50", label: "Curious Explorer", test: () => this.progress.totalInteractions >= 50 },
-      { id: "explorer_200", label: "Master Explorer", test: () => this.progress.totalInteractions >= 200 },
-      { id: "treasure_hunter", label: "Treasure Hunter", test: () => (this.progress.collectiblesFound || 0) >= 5 }
+      { id: "explorer_200", label: "Master Explorer", test: () => this.progress.totalInteractions >= 200 }
     ];
     defs.forEach(d => {
       if (!this.progress.achievements[d.id] && d.test()) {
@@ -213,22 +211,7 @@ class App {
     this.particles.burstConfetti(this.controls.target.clone().add(new THREE.Vector3(0, 2, 0)), 50);
     this.audio.playSuccess();
     this.speech.speak(`New badge! ${label}!`);
-    this.cameraShake(0.08, 320);
     if (window.UI) UI.showAchievementToast(label);
-  }
-
-  /** Called when a child finds one of the rare hidden golden stars scattered
-   *  around the world (see World._buildHiddenCollectibles). Separate from the
-   *  normal reward() path because it always celebrates - hidden finds should
-   *  never feel routine. */
-  collectHidden(position) {
-    this.progress.collectiblesFound = (this.progress.collectiblesFound || 0) + 1;
-    this.particles.burstConfetti(position, 36);
-    this.audio.playSuccess();
-    this.speech.speak("You found a hidden star! Amazing exploring!");
-    this.cameraShake(0.05, 240);
-    this._checkAchievements();
-    this.saveProgress();
   }
 
   /** Called by every interactive object after its own reward FX - adds the shared
@@ -258,8 +241,7 @@ class App {
   resume() { this.paused = false; }
 
   resetProgress() {
-    localStorage.removeItem(SAVE_KEY);
-    this.progress = this._loadProgress();
+    localStorage.removeItem(SAVE_KEY); this.progress = this._loadProgress();
     this.settings = this.progress.settings;
     this.applySettingsLive();
   }
@@ -279,39 +261,7 @@ class App {
       this.particles.update();
       this.environment.update(t, speed);
       this.controls.update();
-      this._applyCameraShake();
     }
     this.renderer.render(this.scene, this.camera);
-  }
-
-  /** Brief, gentle camera shake for special moments (achievements, hidden finds).
-   *  Never used for anything jarring/violent - amplitude is deliberately small
-   *  and respects the "reduce motion" accessibility setting (skipped entirely). */
-  cameraShake(intensity = 0.06, duration = 260) {
-    if (this.settings.reducedMotion) return;
-    this._shake = { start: performance.now(), duration, intensity };
-  }
-
-  _applyCameraShake() {
-    if (!this._shake) return;
-    const elapsed = performance.now() - this._shake.start;
-    if (elapsed >= this._shake.duration) { this._shake = null; return; }
-    const p = 1 - elapsed / this._shake.duration; // fades out
-    const amt = this._shake.intensity * p;
-    this.camera.position.x += (Math.random() - 0.5) * amt;
-    this.camera.position.y += (Math.random() - 0.5) * amt;
-  }
-
-  /** Makes the world feel connected: after any interaction, nearby objects
-   *  give a small secondary reaction (a flower wiggles, a butterfly flutters
-   *  faster, an animal glances over) instead of the world staying inert.
-   *  Deliberately lightweight - no sound/reward stacking, just motion, so it
-   *  reads as "the world noticed" rather than triggering a cascade of rewards. */
-  triggerNearbyReactions(position, radius = 3.5, excludeObj = null) {
-    this.world.interactiveObjects.forEach(obj => {
-      if (obj === excludeObj || !obj.userData.react) return;
-      const dist = obj.getWorldPosition(new THREE.Vector3()).distanceTo(position);
-      if (dist <= radius) obj.userData.react();
-    });
   }
 }

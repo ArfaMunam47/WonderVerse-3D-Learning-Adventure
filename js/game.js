@@ -12,11 +12,9 @@ const SAVE_KEY = "magicalWorldSave_v1";
 class App {
   constructor() {
     this.canvas = document.getElementById("game-canvas");
-    this.cursorEl = document.getElementById("cursor");
     this.clock = new THREE.Clock();
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
-    this.hoveredObject = null;
 
     this.audio = new AudioEngine();
     this.speech = new SpeechManager();
@@ -28,6 +26,7 @@ class App {
     this._initScene();
     this._initCameraRig();
     this._bindInput();
+    this._bindParallax();
     window.addEventListener("resize", () => this._onResize());
 
     this.paused = false;
@@ -103,6 +102,9 @@ class App {
     this.world = new World(this.scene);
     this.particles = new ParticleSystem(this.scene);
     this.particles.animSpeedMultiplier = this.settings.reducedMotion ? 0.5 : this.settings.animationSpeed;
+
+    // NEW: day/night cycle + wind + weather (rain/snow), see environment.js
+    this.environment = new Environment(this.scene, this.world.sky, this.world.sunLight, this.particles);
   }
 
   _initCameraRig() {
@@ -147,17 +149,9 @@ class App {
 
   /* -------------------------------- input ---------------------------------- */
   _bindInput() {
-    // Ensure cursor element exists before enabling hover effects.
-    if (this.cursorEl) {
-      this.cursorEl.classList.remove("visible");
-    }
-    const updateCursor = (clientX, clientY) => {
-      if (!this.cursorEl) return;
+    const handleTap = (clientX, clientY) => {
+      if (this.paused || !this.running) return;
       const rect = this.canvas.getBoundingClientRect();
-      this.cursorEl.style.left = `${clientX}px`;
-      this.cursorEl.style.top = `${clientY}px`;
-      this.cursorEl.classList.add("visible");
-
       this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
       this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       this.raycaster.setFromCamera(this.pointer, this.camera);
@@ -165,52 +159,23 @@ class App {
         this.world.interactiveObjects.filter(o => o.userData.interactive && o.visible),
         true
       );
-      const hover = hits.length ? this._findInteractiveRoot(hits[0].object) : null;
-      if (hover && hover !== this.hoveredObject) {
-        this.cursorEl.classList.add("hover");
-        this.hoveredObject = hover;
-      } else if (!hover) {
-        this.cursorEl.classList.remove("hover");
-        this.hoveredObject = null;
-      }
-    };
-
-    const handleTap = (clientX, clientY) => {
-      if (this.paused || !this.running) return;
-      updateCursor(clientX, clientY);
-      const hits = this.raycaster.intersectObjects(
-        this.world.interactiveObjects.filter(o => o.userData.interactive && o.visible),
-        true
-      );
       if (hits.length === 0) return;
-      let obj = this._findInteractiveRoot(hits[0].object);
-      if (obj && obj.userData.onInteract) {
-        this.cursorEl.classList.add("active");
-        setTimeout(() => this.cursorEl.classList.remove("active"), 120);
+      let obj = hits[0].object;
+      while (obj.parent && !obj.userData.onInteract) obj = obj.parent;
+      if (obj.userData.onInteract) {
         obj.userData.onInteract(this);
         this._trackInteraction(obj.userData.kind, obj.userData.label);
       }
     };
 
     let downPos = null;
-    this.canvas.addEventListener("pointermove", (e) => updateCursor(e.clientX, e.clientY));
-    this.canvas.addEventListener("pointerleave", () => {
-      if (this.cursorEl) this.cursorEl.classList.remove("visible", "hover");
-      this.hoveredObject = null;
-    });
     this.canvas.addEventListener("pointerdown", (e) => { downPos = { x: e.clientX, y: e.clientY }; });
     this.canvas.addEventListener("pointerup", (e) => {
       if (!downPos) return;
       const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
-      if (dist < 8) handleTap(e.clientX, e.clientY);
+      if (dist < 8) handleTap(e.clientX, e.clientY); // treat as tap only if it wasn't a drag/orbit
       downPos = null;
     });
-  }
-
-  _findInteractiveRoot(obj) {
-    let current = obj;
-    while (current && current.parent && !current.userData?.onInteract) current = current.parent;
-    return current?.userData?.onInteract ? current : null;
   }
 
   _trackInteraction(kind, label) {
@@ -233,7 +198,8 @@ class App {
       { id: "alphabet_master", label: "Alphabet Champion", test: () => uniqueCount("letter") >= GAME_DATA.alphabet.length },
       { id: "numbers_master", label: "Counting Star", test: () => uniqueCount("number") >= GAME_DATA.numbers.length },
       { id: "explorer_50", label: "Curious Explorer", test: () => this.progress.totalInteractions >= 50 },
-      { id: "explorer_200", label: "Master Explorer", test: () => this.progress.totalInteractions >= 200 }
+      { id: "explorer_200", label: "Master Explorer", test: () => this.progress.totalInteractions >= 200 },
+      { id: "treasure_hunter", label: "Treasure Hunter", test: () => (this.progress.collectiblesFound || 0) >= 5 }
     ];
     defs.forEach(d => {
       if (!this.progress.achievements[d.id] && d.test()) {
@@ -247,7 +213,22 @@ class App {
     this.particles.burstConfetti(this.controls.target.clone().add(new THREE.Vector3(0, 2, 0)), 50);
     this.audio.playSuccess();
     this.speech.speak(`New badge! ${label}!`);
+    this.cameraShake(0.08, 320);
     if (window.UI) UI.showAchievementToast(label);
+  }
+
+  /** Called when a child finds one of the rare hidden golden stars scattered
+   *  around the world (see World._buildHiddenCollectibles). Separate from the
+   *  normal reward() path because it always celebrates - hidden finds should
+   *  never feel routine. */
+  collectHidden(position) {
+    this.progress.collectiblesFound = (this.progress.collectiblesFound || 0) + 1;
+    this.particles.burstConfetti(position, 36);
+    this.audio.playSuccess();
+    this.speech.speak("You found a hidden star! Amazing exploring!");
+    this.cameraShake(0.05, 240);
+    this._checkAchievements();
+    this.saveProgress();
   }
 
   /** Called by every interactive object after its own reward FX - adds the shared
@@ -296,8 +277,41 @@ class App {
       const speed = this.settings.reducedMotion ? 0.5 : this.settings.animationSpeed;
       this.world.update(t * speed);
       this.particles.update();
+      this.environment.update(t, speed);
       this.controls.update();
+      this._applyCameraShake();
     }
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Brief, gentle camera shake for special moments (achievements, hidden finds).
+   *  Never used for anything jarring/violent - amplitude is deliberately small
+   *  and respects the "reduce motion" accessibility setting (skipped entirely). */
+  cameraShake(intensity = 0.06, duration = 260) {
+    if (this.settings.reducedMotion) return;
+    this._shake = { start: performance.now(), duration, intensity };
+  }
+
+  _applyCameraShake() {
+    if (!this._shake) return;
+    const elapsed = performance.now() - this._shake.start;
+    if (elapsed >= this._shake.duration) { this._shake = null; return; }
+    const p = 1 - elapsed / this._shake.duration; // fades out
+    const amt = this._shake.intensity * p;
+    this.camera.position.x += (Math.random() - 0.5) * amt;
+    this.camera.position.y += (Math.random() - 0.5) * amt;
+  }
+
+  /** Makes the world feel connected: after any interaction, nearby objects
+   *  give a small secondary reaction (a flower wiggles, a butterfly flutters
+   *  faster, an animal glances over) instead of the world staying inert.
+   *  Deliberately lightweight - no sound/reward stacking, just motion, so it
+   *  reads as "the world noticed" rather than triggering a cascade of rewards. */
+  triggerNearbyReactions(position, radius = 3.5, excludeObj = null) {
+    this.world.interactiveObjects.forEach(obj => {
+      if (obj === excludeObj || !obj.userData.react) return;
+      const dist = obj.getWorldPosition(new THREE.Vector3()).distanceTo(position);
+      if (dist <= radius) obj.userData.react();
+    });
   }
 }

@@ -15,12 +15,23 @@
   --ink:          #33334D;
   --white:        #FFFFFF;
 
+  /* Extra pastel accents for a livelier, more colorful UI throughout */
+  --pastel-blue:  #EAF4FF;
+  --pastel-green: #EAFBEA;
+  --pastel-yellow:#FFF6D9;
+  --pastel-pink:  #FFF0F8;
+  --pastel-purple:#F3EBFF;
+
   --radius-lg: 28px;
   --radius-md: 18px;
   --radius-sm: 12px;
 
   --shadow-soft: 0 12px 30px rgba(46, 70, 130, 0.18);
   --shadow-pop:  0 6px 16px rgba(46, 70, 130, 0.22);
+  /* Layered "floating card" depth - used by anything meant to feel like it's
+     hovering above the world (menu cards, HUD pills, game tiles) */
+  --shadow-float: 0 4px 10px rgba(46,70,130,0.10), 0 16px 34px rgba(46,70,130,0.20);
+  --shadow-float-hover: 0 8px 16px rgba(46,70,130,0.14), 0 26px 46px rgba(46,70,130,0.26);
 
   --font-display: 'Baloo 2', system-ui, sans-serif;
   --font-body: 'Quicksand', system-ui, sans-serif;
@@ -76,19 +87,38 @@ html, body {
 
 .game-title {
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  font-size: clamp(2.3rem, 6.5vw, 3.6rem);
   font-weight: 800;
-  color: var(--white);
-  text-shadow: 0 4px 0 rgba(46,70,130,0.25), 0 8px 20px rgba(46,70,130,0.25);
   margin: 0 0 4px;
   letter-spacing: 0.5px;
+  display: inline-block;
+  /* Bright, colorful gradient fill instead of solid white - this is what fixes
+     the "invisible on white card" bug, since a gradient reads clearly on both
+     the blue loading screen AND the white menu card. */
+  background: linear-gradient(90deg, #4D96FF 0%, #6BCB77 35%, #FFD93D 68%, #FF9F43 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #FFD93D; /* fallback for browsers without background-clip:text support */
+  /* Soft white outline keeps the gradient crisp against any background */
+  -webkit-text-stroke: 1.5px rgba(255,255,255,0.85);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 4px 0 rgba(46,70,130,0.22)) drop-shadow(0 10px 18px rgba(46,70,130,0.28));
+  animation: titleFloat 4.2s ease-in-out infinite;
 }
+@keyframes titleFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(-0.6deg); }
+}
+body.reduced-motion .game-title { animation: none; }
 .game-subtitle {
   font-size: 1.1rem;
-  font-weight: 600;
-  color: rgba(255,255,255,0.95);
+  font-weight: 700;
+  color: var(--sky-blue-deep);
   margin: 0 0 28px;
 }
+/* Loading screen has a colorful blue background, so its subtitle stays white */
+#loading-screen .game-subtitle { color: rgba(255,255,255,0.95); }
 
 .loading-bar-track {
   width: min(340px, 70vw);
@@ -140,13 +170,15 @@ html, body {
 .menu-card {
   background: var(--white);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-float);
   padding: clamp(24px, 4vw, 44px);
   width: min(480px, 92vw);
   max-height: 92vh;
   overflow-y: auto;
   text-align: center;
   animation: cardIn 0.35s ease;
+  border-top: 6px solid transparent;
+  border-image: linear-gradient(90deg, var(--sky-blue), var(--meadow-green), var(--sunshine), var(--coral)) 1;
 }
 .menu-card.wide { width: min(720px, 94vw); }
 
@@ -183,6 +215,9 @@ html, body {
 }
 .btn:active { transform: scale(0.96); }
 .btn:focus-visible { outline: 3px solid var(--sky-blue-deep); outline-offset: 3px; }
+@media (pointer: fine) {
+  .btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: var(--shadow-float-hover); }
+}
 
 .btn-primary { background: linear-gradient(135deg, var(--sky-blue), var(--sky-blue-deep)); color: var(--white); }
 .btn-secondary { background: linear-gradient(135deg, #ffe27a, var(--sunshine)); color: #5a4300; }
@@ -241,9 +276,17 @@ html, body {
 .badge {
   background: var(--cream); border-radius: var(--radius-md); padding: 14px 8px;
   text-align: center; font-weight: 700; font-size: 0.85rem;
+  box-shadow: var(--shadow-pop); transition: transform var(--anim-fast);
 }
+.badge.earned:nth-child(4n+1) { background: var(--pastel-blue); }
+.badge.earned:nth-child(4n+2) { background: var(--pastel-green); }
+.badge.earned:nth-child(4n+3) { background: var(--pastel-yellow); }
+.badge.earned:nth-child(4n+4) { background: var(--pastel-pink); }
 .badge.locked { opacity: 0.45; }
 .badge-icon { font-size: 2rem; margin-bottom: 6px; }
+@media (pointer: fine) {
+  .badge.earned:hover { transform: translateY(-3px) scale(1.05); }
+}
 
 /* ---------------------------------------------------------------------------
    Learning games hub + Matching game + Memory game
@@ -252,9 +295,12 @@ html, body {
 .game-tile {
   background: var(--cream); border: none; border-radius: var(--radius-md);
   padding: 24px 10px; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem;
-  cursor: pointer; box-shadow: var(--shadow-pop); transition: transform var(--anim-fast);
+  cursor: pointer; box-shadow: var(--shadow-float); transition: transform var(--anim-fast), box-shadow var(--anim-fast);
 }
 .game-tile:active { transform: scale(0.96); }
+@media (pointer: fine) {
+  .game-tile:hover { transform: translateY(-4px) scale(1.03); box-shadow: var(--shadow-float-hover); }
+}
 .game-tile-emoji { display: block; font-size: 2.4rem; margin-bottom: 8px; }
 
 .matching-board { display: flex; gap: 24px; justify-content: center; margin: 16px 0 22px; }
@@ -297,40 +343,18 @@ html, body {
   background: linear-gradient(135deg, #eaf4ff, #dcefff);
   border: none; border-radius: var(--radius-md); padding: 20px 10px;
   font-family: var(--font-display); font-weight: 700; font-size: 1rem;
-  cursor: pointer; box-shadow: var(--shadow-pop); transition: transform var(--anim-fast);
+  cursor: pointer; box-shadow: var(--shadow-float); transition: transform var(--anim-fast), box-shadow var(--anim-fast);
 }
 .world-tile:active { transform: scale(0.95); }
+@media (pointer: fine) {
+  .world-tile:hover { transform: translateY(-4px) scale(1.03); box-shadow: var(--shadow-float-hover); }
+}
 
 /* ---------------------------------------------------------------------------
    Game layer: canvas + HUD
 --------------------------------------------------------------------------- */
 #game-layer { position: fixed; inset: 0; z-index: 10; }
-#cursor {
-  position: fixed; left: 0; top: 0; width: 34px; height: 34px; pointer-events: none;
-  transform: translate(-50%, -50%); z-index: 14; opacity: 0; transition: transform 0.08s ease-out, opacity 0.18s ease;
-  filter: drop-shadow(0 4px 10px rgba(46, 70, 130, 0.35));
-}
-#cursor .cursor-glow {
-  position: absolute; inset: -12px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(120,180,255,0.6) 45%, rgba(120,180,255,0) 72%);
-  animation: cursorFloat 2.4s ease-in-out infinite;
-}
-#cursor .cursor-core {
-  position: absolute; inset: 8px; border-radius: 50%;
-  background: linear-gradient(135deg, #ffffff, #ffe78c 85%);
-  border: 2px solid rgba(46, 70, 130, 0.24);
-  box-shadow: inset 0 0 0 3px rgba(255,255,255,0.65);
-}
-#cursor.hover {
-  transform: translate(-50%, -50%) scale(1.35);
-}
-#cursor.hover .cursor-core { background: linear-gradient(135deg, #ffffff, #ff8fc7 80%); }
-#cursor.active {
-  transform: translate(-50%, -50%) scale(0.82);
-}
-#cursor.visible { opacity: 1; }
-@keyframes cursorFloat { 0%,100%{transform:scale(1);} 50%{transform:scale(1.1);} }
-#game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; cursor: none; }
+#game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
 
 #hud-top {
   position: absolute; top: 0; left: 0; right: 0;
@@ -410,3 +434,46 @@ body.reduced-motion * { animation-duration: 0.001s !important; transition-durati
 @media (min-width: 900px) {
   .memory-board { max-width: 480px; }
 }
+
+/* =============================================================================
+   Custom cursor - a gentle magic sparkle that follows the pointer.
+   Desktop/mouse only: touch devices never see it (there's no cursor to
+   replace, and it would just be a stray floating icon), and it's fully
+   skipped under reduced-motion for sensory-sensitive players.
+   ============================================================================= */
+@media (pointer: fine) {
+  body.custom-cursor-active, body.custom-cursor-active * {
+    cursor: none !important;
+  }
+  #magic-cursor {
+    position: fixed;
+    top: 0; left: 0;
+    width: 40px; height: 40px;
+    margin: -20px 0 0 -20px; /* centers the icon on the tracked point */
+    pointer-events: none;
+    z-index: 999999;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    will-change: transform;
+  }
+  #magic-cursor.visible { opacity: 1; }
+  .cursor-sparkle {
+    width: 100%; height: 100%;
+    display: block;
+    filter: drop-shadow(0 2px 4px rgba(46,70,130,0.35));
+    animation: cursorSpin 5s linear infinite;
+    transform-origin: center;
+  }
+  #magic-cursor.clicking .cursor-sparkle { animation-duration: 0.6s; }
+  .cursor-trail {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,217,61,0.35), transparent 70%);
+    transform: scale(1);
+    transition: transform 0.3s ease;
+  }
+  #magic-cursor.clicking .cursor-trail { transform: scale(1.6); }
+  @keyframes cursorSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+}
+/* Never show the custom cursor on touch devices or in reduced-motion mode */
+body.reduced-motion #magic-cursor { display: none; }

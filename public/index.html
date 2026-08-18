@@ -21,6 +21,9 @@
 </head>
 <body>
 
+<!-- Premium ambient shader-line background (js/shader-bg.js) -->
+<canvas id="shader-bg" aria-hidden="true"></canvas>
+
 <!-- ============================== LOADING SCREEN ============================== -->
 <div id="loading-screen">
   <div class="loading-inner">
@@ -67,12 +70,12 @@
     <p class="game-subtitle">Explore. Discover. Learn.</p>
 
     <div class="menu-buttons">
-      <button class="btn btn-primary" id="btn-play">▶ Play</button>
-      <button class="btn btn-secondary hidden" id="btn-continue">↻ Continue</button>
-      <button class="btn btn-secondary" id="btn-learning-games">🧩 Learning Games</button>
-      <button class="btn btn-secondary" id="btn-achievements">🏆 My Progress</button>
-      <button class="btn btn-secondary" id="btn-settings">⚙ Settings</button>
-      <button class="btn btn-tertiary" id="btn-howto">❓ How to Play</button>
+      <button class="btn btn-primary spotlight" id="btn-play">▶ Play</button>
+      <button class="btn btn-secondary spotlight hidden" id="btn-continue">↻ Continue</button>
+      <button class="btn btn-secondary spotlight" id="btn-learning-games">🧩 Learning Games</button>
+      <button class="btn btn-secondary spotlight" id="btn-achievements">🏆 My Progress</button>
+      <button class="btn btn-secondary spotlight" id="btn-settings">⚙ Settings</button>
+      <button class="btn btn-tertiary spotlight" id="btn-howto">❓ How to Play</button>
     </div>
   </div>
 </div>
@@ -161,17 +164,17 @@
   <div class="menu-card wide">
     <h2 class="panel-title">Learning Games</h2>
     <p class="panel-subtitle small">Calm, untimed activities — there's no wrong answer, only more to discover.</p>
-    <div class="game-tile-grid">
-      <button class="game-tile" id="btn-open-matching">
+    <div class="game-tile-grid" id="game-tile-grid">
+      <button class="game-tile spotlight" id="btn-open-matching">
         <span class="game-tile-emoji">🔗</span>
         <span>Matching Game</span>
       </button>
-      <button class="game-tile" id="btn-open-memory">
+      <button class="game-tile spotlight" id="btn-open-memory">
         <span class="game-tile-emoji">🃏</span>
         <span>Memory Game</span>
       </button>
     </div>
-    <button class="btn btn-primary" id="btn-learning-games-back">Back</button>
+    <button class="btn btn-primary spotlight" id="btn-learning-games-back">Back</button>
   </div>
 </div>
 
@@ -200,18 +203,14 @@
   <div class="menu-card wide">
     <h2 class="panel-title">Choose a Place to Explore</h2>
     <div class="world-tile-grid" id="world-tile-grid">
-      <button class="world-tile" data-zone="bubblePond">🫧 Bubble Pond</button>
-      <button class="world-tile" data-zone="balloonMeadow">🎈 Balloon Meadow</button>
-      <button class="world-tile" data-zone="flowerGarden">🌸 Flower Garden</button>
-      <button class="world-tile" data-zone="starMeadow">⭐ Star Meadow</button>
-      <button class="world-tile" data-zone="fruitOrchard">🍎 Fruit Orchard</button>
-      <button class="world-tile" data-zone="animalFriends">🐾 Animal Friends</button>
-      <button class="world-tile" data-zone="alphabetGrove">🔤 Alphabet Grove</button>
-      <button class="world-tile" data-zone="shapeSky">🔷 Shape Sky</button>
-      <button class="world-tile" data-zone="oceanPlay">🐬 Ocean Animals</button>
-      <button class="world-tile" data-zone="birdNest">🕊️ Birds</button>
-      <button class="world-tile" data-zone="vehicleValley">🚗 Vehicles</button>
-      <button class="world-tile" data-zone="musicPark">🎵 Music</button>
+      <button class="world-tile spotlight" data-zone="bubblePond">🫧 Bubble Pond</button>
+      <button class="world-tile spotlight" data-zone="balloonMeadow">🎈 Balloon Meadow</button>
+      <button class="world-tile spotlight" data-zone="flowerGarden">🌸 Flower Garden</button>
+      <button class="world-tile spotlight" data-zone="starMeadow">⭐ Star Meadow</button>
+      <button class="world-tile spotlight" data-zone="fruitOrchard">🍎 Fruit Orchard</button>
+      <button class="world-tile spotlight" data-zone="animalFriends">🐾 Animal Friends</button>
+      <button class="world-tile spotlight" data-zone="alphabetGrove">🔤 Alphabet Grove</button>
+      <button class="world-tile spotlight" data-zone="shapeSky">🔷 Shape Sky</button>
     </div>
     <button class="btn btn-primary" id="btn-worldmap-back">Close Map</button>
   </div>
@@ -231,12 +230,6 @@
 
 <!-- ============================== GAME LAYER ============================== -->
 <div id="game-layer" class="hidden">
-  <div id="magic-cursor" aria-hidden="true">
-    <div class="cursor-trail"></div>
-    <svg class="cursor-sparkle" viewBox="0 0 40 40">
-      <path d="M20 0 L23 17 L40 20 L23 23 L20 40 L17 23 L0 20 L17 17 Z" fill="#FFD93D"/>
-    </svg>
-  </div>
   <canvas id="game-canvas"></canvas>
 
   <!-- HUD -->
@@ -260,6 +253,14 @@
   </div>
 </div>
 
+<!-- Custom magic-sparkle cursor (desktop/mouse only - see js/cursor.js) -->
+<div id="magic-cursor" aria-hidden="true">
+  <svg viewBox="0 0 40 40" class="cursor-sparkle">
+    <path d="M20 2 L23 16 L37 20 L23 24 L20 38 L17 24 L3 20 L17 16 Z" fill="#FFD93D" stroke="#FF9F43" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>
+  <div class="cursor-trail"></div>
+</div>
+
 <!-- ============================== LIBRARIES ============================== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -270,9 +271,14 @@
 <script src="js/particles.js"></script>
 <script src="js/objects.js"></script>
 <script src="js/world.js"></script>
-<script src="js/environment.js"></script>
 <script src="js/game.js"></script>
 <script src="js/ui.js"></script>
+
+<!-- ============================== PREMIUM FEATURE SCRIPTS ============================== -->
+<script src="js/shader-bg.js"></script>
+<script src="js/spotlight.js"></script>
+<script src="js/card-effects.js"></script>
+<script src="js/cursor.js"></script>
 
 </body>
 </html>

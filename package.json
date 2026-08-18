@@ -1,0 +1,12 @@
+{
+  "name": "wonder-meadow",
+  "version": "2.0.0",
+  "description": "Wonder Meadow - a magical 3D learning world for early learners",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

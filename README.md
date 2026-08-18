@@ -1,268 +1,300 @@
 <div align="center">
 
-# 🌈 WonderVerse – 3D Learning Adventure
+# 🌼 Wonder Meadow
 
-### An immersive 3D educational experience for children aged **3–6 years**, designed to make learning magical, interactive, and accessible.
+### A magical, calming 3D learning world for early learners — explore, discover, and learn through play.
 
 <p align="center">
-  <strong>Built with ❤️ using Three.js, JavaScript & Modern Web Technologies</strong>
+  <strong>Built with 🧡 using Three.js, Node.js & Vanilla JavaScript</strong>
 </p>
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow)
 ![Three.js](https://img.shields.io/badge/Three.js-3D-black)
-![Vite](https://img.shields.io/badge/Vite-Fast-purple)
+![Node.js](https://img.shields.io/badge/Node.js-Backend-green)
+![Zero-Dependency](https://img.shields.io/badge/Zero—Dependency-Server-success)
+![Accessible](https://img.shields.io/badge/Accessible-Yes-brightgreen)
 ![Responsive](https://img.shields.io/badge/Responsive-Yes-success)
-![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
 
 </div>
 
 ---
 
-# 🌟 About
+## 🌟 About
 
-**WonderVerse** is an immersive **3D educational learning platform** created for children aged **3–6 years**, including children with **Autism Spectrum Disorder (ASD)**, **ADHD**, and other special learning needs.
+**Wonder Meadow** is a **3D educational world** designed for young children, with a special focus on **sensory-friendly, pressure-free learning**. Instead of quizzes and timers, children explore whimsical 3D zones — popping bubbles, tapping flowers, meeting animal friends, and learning the alphabet — all with gentle voice narration, playful sounds, and sparkly rewards.
 
-Rather than traditional learning, WonderVerse transforms education into an exciting magical adventure where children explore colorful worlds, interact with animated objects, listen to voice guidance, and learn through engaging gameplay.
-
-The project focuses on creating a **safe, sensory-friendly, and joyful learning environment** that encourages curiosity, confidence, and creativity.
+Every interaction earns **stars, coins, and badges**. There is **no wrong answer and no way to lose** — only more to discover. Progress is saved locally in the browser, and optional **child learner profiles** can be created on the server for persistent, per-child progress tracking and learning analytics.
 
 ---
 
-# ✨ Features
+## 🎮 Features
 
-## 🎮 Interactive Learning
+### 🗺️ Eight Explore Zones
 
-- 🫧 Bubble Pop Activity
-- 🍎 Learn Fruits
-- 🦁 Learn Animals
-- 🌸 Learn Flowers
-- 🔤 Alphabet Learning (A–Z)
-- 🔢 Number Recognition
-- 🎨 Color Recognition
-- 🔺 Shape Recognition
+| Zone | What You Learn |
+|------|----------------|
+| 🫧 **Bubble Pond** | Cause & effect, bubbles |
+| 🎈 **Balloon Meadow** | Balloons, colors |
+| 🌸 **Flower Garden** | Colors (10 colors) |
+| ⭐ **Star Meadow** | Numbers 1–20 |
+| 🍎 **Fruit Orchard** | Fruits & vegetables |
+| 🐾 **Animal Friends** | 8 animals with sounds |
+| 🔤 **Alphabet Grove** | Letters A–Z with words |
+| 🔷 **Shape Sky** | 10 shapes |
 
----
+### 🧩 Learning Games
 
-## 🌍 3D Experience
+- **🔗 Matching Game** — tap a picture, then tap its matching name
+- **🃏 Memory Game** — flip two cards to find a pair
 
-- 🌈 Beautiful 3D Environment
-- ✨ Magical Particle Effects
-- 🎥 Smooth Camera Animations
-- 🌟 Interactive Objects
-- 🎭 Cartoon-style Learning
-- 💫 Smooth Scene Transitions
+### 🏆 Rewards & Progress
 
----
+- ⭐ Stars for every unique discovery
+- 🪙 Coin rewards with animated HUD feedback
+- 🎖️ Badge system — 9 achievements that unlock as children explore
+- 📈 Progress panel showing letter/animal/fruit/shape/number mastery
+- 💾 **Local Storage** save system
+- 👤 **Optional server-side learner profiles** with persistent progress, session logs, and learning analytics
 
-## 🎵 Audio Experience
+### 🎵 Audio & Voice
 
-- 🔊 Voice Narration
-- 🎼 Background Music
-- 🎯 Interactive Sound Effects
-- 🎤 Educational Audio Feedback
+- 🔊 Procedural sound effects (Web Audio API — no audio files needed)
+- 🎼 Ambient background music
+- 🗣️ Speech synthesis with **spoken word captions** (caption bubble)
+- 🎤 Friendly encouragement spoken after interactions
 
----
+### ♿ Accessibility & Settings
 
-## 🏆 Gamification
+A full settings panel makes the world adaptable to each child's needs:
 
-- ⭐ Reward Stars
-- 🎖️ Achievement System
-- 📈 Progress Tracking
-- 💾 Local Storage Save System
+- 🎚️ Music volume slider
+- 🔊 SFX volume slider
+- 🗣️ Spoken words on/off toggle
+- 🐢 Animation speed slider (0.5×–1.5×)
+- 🌗 **High Contrast Mode**
+- 🎨 **Color-Blind Friendly Mode**
+- 🧘 **Reduced Motion Mode**
 
----
+### ✨ Premium Visual Polish
 
-## ♿ Accessibility
-
-Designed especially for young learners with:
-
-- Autism
-- ADHD
-- Learning Disabilities
-- Early Childhood Education
-
-Features include:
-
-- Calm UI
-- Bright Visuals
-- Friendly Animations
-- Easy Navigation
-- Positive Reinforcement
-- Sensory-Friendly Design
+- 🌌 Animated shader-line background canvas
+- 🪄 Magic sparkle cursor with trail (desktop)
+- 💥 Confetti particle bursts on rewards
+- 🔦 Interactive spotlight hover effects
+- 🎴 Card flip / shine effects on game tiles
 
 ---
 
-# 🚀 Upcoming Features
-
-- 🐠 Ocean Animals
-- 🐦 Birds Learning
-- 🚗 Vehicles
-- 🎼 Musical Instruments
-- 🦖 Dinosaurs
-- 🌍 Space Learning
-- 🌙 Day & Night Cycle
-- ☀️ Dynamic Weather
-- 🎈 Advanced Cursor Effects
-- 🤖 AI-Powered Personalized Learning
-- 🎤 Voice Interaction
-- 🧩 Mini Educational Games
-- 🎁 Daily Rewards
-- 🏅 Learning Levels
-- 🌎 Multiple Learning Worlds
-- 👨‍👩‍👧 Parent Dashboard
-- 📊 Learning Analytics
-
----
-
-# 🛠 Tech Stack
+## 🛠️ Tech Stack
 
 | Technology | Purpose |
 |------------|----------|
-| HTML5 | Structure |
-| CSS3 | Styling |
-| JavaScript (ES6+) | Logic |
-| Three.js | 3D Rendering |
-| Vite | Development |
-| GSAP | Animations |
-| Howler.js | Audio |
-| Local Storage | Save Progress |
+| Node.js (built-in `http`) | Static file + REST API server (zero-dependency) |
+| HTML5 & CSS3 | Structure & styling (rounded, storybook feel) |
+| Vanilla JavaScript (ES6+) | Game logic, 3D scene, UI, audio, speech |
+| Three.js (r128) | 3D rendering, WebGL scene, OrbitControls camera |
+| Web Audio API | Procedural sound effects & music |
+| Web Speech API | Spoken words, captions & encouragement |
+| Local Storage | Progress & settings persistence (offline save) |
+| JSON file store (`data/db.json`) | Server-side learner profiles, progress, analytics |
 
 ---
 
-# 📂 Project Structure
+## 📂 Project Structure
 
 ```text
-WonderVerse/
+wonder-meadow/
 │
-├── assets/
-│   ├── models/
-│   ├── textures/
-│   ├── audio/
-│   └── images/
-│
-├── src/
-│   ├── scenes/
-│   ├── activities/
-│   ├── ui/
-│   ├── utils/
-│   └── main.js
-│
-├── public/
-│
-├── index.html
+├── server.js                 # Node.js HTTP server + REST API (zero-dependency)
 ├── package.json
-└── README.md
+│
+├── data/
+│   └── db.json               # Auto-created JSON store (profiles, progress, sessions)
+│
+└── public/
+    ├── index.html            # Single-page app (menus, screens, game canvas)
+    ├── css/
+    │   └── style.css
+    ├── js/
+    │   ├── data.js           # Learning content (colors, shapes, animals, fruits…)
+    │   ├── audio.js          # Web Audio engine — SFX, music, speech
+    │   ├── particles.js      # Confetti / sparkle particle system
+    │   ├── objects.js        # 3D object builders (flowers, animals, letters…)
+    │   ├── world.js          # Zone / world construction
+    │   ├── game.js           # App class — render loop, input, rewards, achievements
+    │   ├── ui.js             # Menus, screens, HUD, badges, games hub
+    │   ├── shader-bg.js      # Premium animated shader background
+    │   ├── spotlight.js      # Interactive spotlight hover effects
+    │   ├── card-effects.js   # Card flip / shine effects
+    │   ├── cursor.js         # Magic sparkle cursor
+    │   └── ...
+    └── assets/
+        └── favicons / icons
 ```
 
 ---
 
-# 📸 Screenshots
+## 🚀 Getting Started
 
-<img width="960" height="472" alt="{9CF0991B-3128-4558-9BCE-56DA2C7D0C74}" src="https://github.com/user-attachments/assets/b2824883-e429-4b3b-9b06-504891da2e0d" />
+### Prerequisites
 
-<img width="960" height="474" alt="{60E8ED00-A748-4C4B-8AD8-0007AF7CB02C}" src="https://github.com/user-attachments/assets/544b2c8e-fcd4-4671-b554-e5d31f1139cc" />
-<img width="960" height="478" alt="{7890EB8E-1DCC-4BB1-9411-A32E998EF10C}" src="https://github.com/user-attachments/assets/ce508ee5-784b-46be-b57c-6400a2d7bd33" />
+- [Node.js](https://nodejs.org/) 14+ (any version with `crypto.randomUUID`)
 
+### Run
 
-
-
-
-
-# 🚀 Installation
-
-Clone the repository
+Wonder Meadow is **zero-dependency on the server** — the backend uses only Node's built-in `http`, `fs`, and `crypto` modules.
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/ArfaMunam47/WonderVerse-3D-Learning-Adventure.git
-```
 
-Navigate into the project
-
-```bash
+# 2. Navigate into the project
 cd WonderVerse-3D-Learning-Adventure
+
+# 3. Start the server (no npm install needed!)
+npm start
+#   → or directly: node server.js
 ```
 
-Install dependencies
+Open **http://localhost:3000** in your browser. The server serves the frontend from `/public` and the REST API on the same port. Set the `PORT` environment variable to override:
 
 ```bash
-npm install
+PORT=8080 node server.js
 ```
 
-Start development server
+### Quick start (no install)
 
-```bash
-npm run dev
-```
+If you'd just like to try the game without Node, open `public/index.html` directly in a browser — the core game, 3D world, sounds, and local-storage saving all work standalone. The REST API (learner profiles & analytics) requires the Node server.
 
-Build for production
+---
 
-```bash
-npm run build
-```
+## 🔌 REST API
 
-Preview production build
+The server exposes a small JSON API for **child learner profiles**, **progress tracking**, and **learning analytics**.
 
-```bash
-npm run preview
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/profiles` | List all learner profiles |
+| `POST` | `/api/profiles` | Create a profile `{ name, age?, avatar? }` |
+| `GET` | `/api/profiles/:id` | Get one profile |
+| `PUT` | `/api/profiles/:id` | Update a profile |
+| `DELETE` | `/api/profiles/:id` | Delete a profile |
+| `GET` | `/api/progress/:id` | Get progress for a profile |
+| `POST` | `/api/progress/:id` | Merge incremental progress (unions arrays, sums counters) |
+| `GET` | `/api/analytics/:id` | Learning analytics: favorite zone, time per zone, milestones, suggested focus |
+
+**Progress model** tracks:
+- `unlockedLetters` — letters learned
+- `masteredAnimals` — animals mastered
+- `completedQuizzes` — quizzes completed
+- `stars`, `coins` — reward currencies
+- `achievements` — unlocked badges
+- `totalPlaySeconds` + `zoneTimeSeconds` — engagement analytics
+- `sessions` — rolling session log (capped at 500 entries)
+
+Data is stored as a pretty-printed JSON file at `data/db.json` (auto-created on first run). The `db.*` repository layer is the only code that touches storage, so swapping in SQLite/Postgres later requires no route changes.
+
+---
+
+## 🕹️ How to Play
+
+1. Tap **▶ Play** to enter the 3D world — or **↻ Continue** to resume a saved game.
+2. **Tap or click** anything you see — flowers, animals, stars, balloons, and more. Every tap earns sparkles, sounds, and a friendly voice.
+3. **Drag** gently to look around the world (OrbitControls — right click/zoom to move closer or further).
+4. Use the **🗺️ map button** to travel to a new zone (smooth animated camera flight).
+5. Tap **🧩 Learning Games** in the main menu to play the **Matching** or **Memory** games.
+6. Track badges in **🏆 My Progress** — 9 achievements to unlock!
+7. Tap **⏸️** any time to pause, open settings, or return to the main menu.
+
+---
+
+## 🏆 Achievements
+
+| Badge | How to Earn |
+|-------|-------------|
+| 🏅 First Discovery | Make your first interaction |
+| 🎨 Color Explorer | Tap every color flower in the Flower Garden |
+| ⭐ Shape Star | Tap every shape in Shape Sky |
+| 🐾 Animal Friend | Tap every animal in Animal Friends |
+| 🍎 Orchard Hero | Tap every fruit in the Fruit Orchard |
+| 🔤 Alphabet Champion | Tap every letter in the Alphabet Grove |
+| 🔢 Counting Star | Tap every number in Star Meadow |
+| 🧭 Curious Explorer | Reach 50 total interactions |
+| 🌟 Master Explorer | Reach 200 total interactions |
+
+---
+
+## 🎯 Design Philosophy
+
+Wonder Meadow is built around one core idea: **learning should never feel like a test.**
+
+- **No timers, no scores, no losing.** Every interaction is a reward.
+- **Positive reinforcement only** — gentle encouraging voice messages ("Great job!", "Wonderful!").
+- **Calm, rounded, low-contrast-friendly visuals** with optional High Contrast and Color-Blind modes.
+- **Reduce Motion mode** halves animation speed and minimizes motion for sensory-sensitive children.
+- **Tap = discover** — simple enough for a 3-year-old, delightful enough to keep exploring.
+
+---
+
+## 🧭 Roadmap
+
+- 🚗 Vehicle Valley zone
+- 🐠 Ocean Animals zone
+- 🦖 Dinosaurs zone
+- 🎼 Musical Instruments
+- 🏅 Learning Levels
+- 🤖 Adaptive difficulty / personalized learning
+- 👨‍👩‍👧 Parent dashboard with analytics charts
+- 🌙 Day & Night cycle
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! If you'd like to improve Wonder Meadow:
+
+1. **Fork** the repository
+2. Create a feature branch:
+
+   ```bash
+   git checkout -b feature/YourFeature
+   ```
+
+3. **Commit** your changes:
+
+   ```bash
+   git commit -m "Add amazing feature"
+   ```
+
+4. **Push** the branch:
+
+   ```bash
+   git push origin feature/YourFeature
+   ```
+
+5. Open a **Pull Request**
+
+### Adding new learning content
+
+All learning content lives in **`public/js/data.js`** as plain arrays — adding a new fruit, animal, shape, or letter requires no changes to the 3D or UI code. Just add an entry:
+
+```js
+animals: [
+  { name: "Dog", color: 0xC98A4B, sound: "woof" },
+  // … add your new animal here
+]
 ```
 
 ---
 
-# 🎯 Mission
-
-Our mission is to make early childhood education more engaging, interactive, and inclusive through immersive 3D experiences.
-
-WonderVerse encourages children to:
-
-- Explore
-- Learn
-- Imagine
-- Create
-- Play
-- Grow
-
-Every interaction is carefully designed to foster curiosity while making learning enjoyable.
-
----
-
-# 🌍 Vision
-
-To build the next generation of AI-powered educational experiences where every child—regardless of learning style—can explore knowledge through play.
-
----
-
-# 🤝 Contributing
-
-Contributions are always welcome!
-
-If you'd like to improve WonderVerse:
-
-1. Fork the repository
-2. Create a feature branch
-
-```bash
-git checkout -b feature/YourFeature
-```
-
-3. Commit your changes
-
-```bash
-git commit -m "Add amazing feature"
-```
-
-4. Push the branch
-
-```bash
-git push origin feature/YourFeature
-```
-
-# 📄 License
+## 📄 License
 
 This project is licensed under the **MIT License**.
 
 ---
 
-**Made with ❤️ by Arfa Munam**
+**Made with 🧡 for curious little minds.**
 
 </div>

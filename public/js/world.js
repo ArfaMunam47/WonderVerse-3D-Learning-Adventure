@@ -170,8 +170,7 @@ class World {
     const ZONE_RADIUS = 13;
     const zoneDefs = [
       "bubblePond", "balloonMeadow", "flowerGarden", "starMeadow",
-      "fruitOrchard", "animalFriends", "alphabetGrove", "shapeSky",
-      "oceanPlay", "birdNest", "vehicleValley", "musicPark"
+      "fruitOrchard", "animalFriends", "alphabetGrove", "shapeSky"
     ];
     zoneDefs.forEach((name, i) => {
       const angle = (i / zoneDefs.length) * Math.PI * 2;
@@ -182,26 +181,6 @@ class World {
     {
       const c = this.zones.bubblePond.center;
       this._zoneSign(c, "Bubble Pond", 0x4D96FF);
-
-      const pond = new THREE.Mesh(
-        new THREE.CircleGeometry(3.2, 40),
-        new THREE.MeshPhysicalMaterial({
-          color: 0x5fcaff,
-          transparent: true,
-          opacity: 0.78,
-          roughness: 0.18,
-          metalness: 0,
-          transmission: 0.35,
-          ior: 1.1,
-          clearcoat: 0.8,
-          clearcoatRoughness: 0.15
-        })
-      );
-      pond.rotation.x = -Math.PI / 2;
-      pond.position.set(c.x, 0.05, c.z);
-      pond.receiveShadow = true;
-      this.scene.add(pond);
-
       this._placeRing(c, 2.4, 7, (pos) => {
         pos.y = 1 + Math.random() * 0.6;
         const b = Objects.createBubble(pos);
@@ -305,54 +284,6 @@ class World {
         const m = Objects.createMusicalObject(pos, i);
         this.interactiveObjects.push(m);
         return m;
-      });
-    }
-
-    // ---- Ocean Animals -----------------------------------------------------
-    {
-      const c = this.zones.oceanPlay.center;
-      this._zoneSign(c, "Ocean Animals", 0x4D96FF);
-      this._placeRing(c, 2.6, GAME_DATA.oceanAnimals.length, (pos, i) => {
-        pos.y = 1.0;
-        const o = Objects.createAnimal(pos, { ...GAME_DATA.oceanAnimals[i], kind: "ocean" });
-        this.interactiveObjects.push(o);
-        return o;
-      });
-    }
-
-    // ---- Bird Nest ---------------------------------------------------------
-    {
-      const c = this.zones.birdNest.center;
-      this._zoneSign(c, "Birds", 0x6BCB77);
-      this._placeRing(c, 2.8, GAME_DATA.birds.length, (pos, i) => {
-        pos.y = 1.2;
-        const bird = Objects.createAnimal(pos, { ...GAME_DATA.birds[i], kind: "bird" });
-        this.interactiveObjects.push(bird);
-        return bird;
-      });
-    }
-
-    // ---- Vehicle Valley ----------------------------------------------------
-    {
-      const c = this.zones.vehicleValley.center;
-      this._zoneSign(c, "Vehicles", 0xFF8FC7);
-      this._placeRing(c, 2.8, GAME_DATA.vehicles.length, (pos, i) => {
-        pos.y = 0.5;
-        const vehicle = Objects.createVehicle(pos, GAME_DATA.vehicles[i]);
-        this.interactiveObjects.push(vehicle);
-        return vehicle;
-      });
-    }
-
-    // ---- Music Park --------------------------------------------------------
-    {
-      const c = this.zones.musicPark.center;
-      this._zoneSign(c, "Music Park", 0xA66DD4);
-      this._placeRing(c, 2.7, GAME_DATA.instruments.length, (pos, i) => {
-        pos.y = 0.6;
-        const ins = Objects.createInstrument(pos, GAME_DATA.instruments[i]);
-        this.interactiveObjects.push(ins);
-        return ins;
       });
     }
 

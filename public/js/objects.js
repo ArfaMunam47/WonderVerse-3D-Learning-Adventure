@@ -59,97 +59,33 @@ const Objects = {
   createBubble(position) {
     const group = new THREE.Group();
     const geo = new THREE.SphereGeometry(0.4, 24, 24);
-    // Stronger aqua/water tint so the bubbles stay visible over the pond.
     const mat = new THREE.MeshPhysicalMaterial({
-      color: 0x8be6ff,
-      emissive: 0x3ea6ff,
-      emissiveIntensity: 0.18,
-      transparent: true,
-      opacity: 0.9,
-      roughness: 0.04,
-      metalness: 0,
-      transmission: 0.96,
-      ior: 1.08,
-      clearcoat: 1,
-      clearcoatRoughness: 0.08
+      color: 0xffffff, transparent: true, opacity: 0.35,
+      roughness: 0.05, metalness: 0, transmission: 0.9, thickness: 0.5
     });
     const sphere = new THREE.Mesh(geo, mat);
-    const rim = new THREE.Mesh(
-      new THREE.SphereGeometry(0.42, 20, 20),
-      new THREE.MeshBasicMaterial({ color: 0xcff8ff, transparent: true, opacity: 0.18 })
-    );
-    rim.scale.set(1.05, 1.05, 1.05);
-    const shimmer = new THREE.Mesh(
-      new THREE.SphereGeometry(0.28, 16, 16),
-      new THREE.MeshBasicMaterial({ color: 0xbff3ff, transparent: true, opacity: 0.38 })
-    );
-    shimmer.position.z = 0.1;
-    group.add(sphere, rim, shimmer);
+    group.add(sphere);
     group.position.copy(position);
     group.userData = {
       kind: "bubble",
-      label: "Bubble",
+      label: "Pop!",
       interactive: true,
-      popped: false,
       floatOffset: Math.random() * Math.PI * 2,
       idle(t) {
-        if (this.popped) return;
         group.position.y = position.y + Math.sin(t * 0.7 + this.floatOffset) * 0.3;
         group.rotation.y += 0.004;
       },
       onInteract(app) {
-        if (this.popped) return;
-        this.popped = true;
-
-        const worldPos = group.getWorldPosition(new THREE.Vector3());
-
-        // Visual reward
-        app.particles.burstRainbowPop(worldPos, 30);
-        app.particles.burstStars(worldPos, 18);
-
-        // Floating stars to draw attention
-        app.particles.floatStars(worldPos.clone().add(new THREE.Vector3(0, 0.3, 0)), 8);
-
-        // Audio + voice
+        app.particles.burstSparkles(group.getWorldPosition(new THREE.Vector3()), 26);
         app.audio.playPop();
-        app.speech.speak("Pop! Great job!");
-
-        // Score + progress
-        app.reward(1, "bubble");
-
-        // Cheer after pop
-        setTimeout(() => app.speech.encourage(), 350);
-
-        // Reliable smooth pop animation (no tween dependency)
-        const start = performance.now();
-        const startScale = group.scale.clone();
-        const targetScale = new THREE.Vector3(0.12, 0.12, 0.12);
-        const duration = 190;
-        const easeOut = (p) => 1 - Math.pow(1 - p, 3);
-
-        const step = (now) => {
-          const p = Math.min(1, (now - start) / duration);
-          const e = easeOut(p);
-          group.scale.lerpVectors(startScale, targetScale, e);
-          group.rotation.y += 0.04;
-          group.rotation.x += 0.02;
-
-          if (p < 1) {
-            requestAnimationFrame(step);
-          } else {
-            group.visible = false;
-            group.scale.set(1, 1, 1);
-            // reset so the child can keep popping bubbles
-            setTimeout(() => {
-              group.visible = true;
-              this.popped = false;
-              group.position.copy(position);
-              group.scale.set(1, 1, 1);
-            }, 650);
-          }
-        };
-
-        requestAnimationFrame(step);
+        app.speech.speak("Pop!");
+        app.reward(0.5);
+        group.visible = false;
+        setTimeout(() => {
+          group.visible = true;
+          group.scale.set(0.001, 0.001, 0.001);
+          new TWEENlite(group.scale, { x: 1, y: 1, z: 1 }, 500);
+        }, 1400);
       }
     };
     return group;
@@ -362,67 +298,14 @@ const Objects = {
   // =========================================================================
   createFruit(position, fruitData) {
     const group = new THREE.Group();
-    const bodyMat = this.softMaterial(fruitData.color, { roughness: 0.35 });
-    let body;
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), this.softMaterial(fruitData.color, { roughness: 0.35 }));
+    if (fruitData.name === "Banana") body.scale.set(1.6, 0.5, 0.5);
+    if (fruitData.name === "Carrot") { body.scale.set(0.6, 1.4, 0.6); body.geometry = new THREE.ConeGeometry(0.22, 0.7, 12); }
+    if (fruitData.name === "Corn") body.scale.set(0.5, 1.5, 0.5);
+    group.add(body);
     const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.18, 6), this.softMaterial(0x4caf50));
-    leaf.position.y = 0.34;
-    switch (fruitData.name) {
-      case "Apple":
-        body = new THREE.Mesh(new THREE.SphereGeometry(0.28, 20, 20), bodyMat);
-        body.scale.set(1, 1.02, 1);
-        group.add(body, leaf);
-        break;
-      case "Banana":
-        body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.75, 12), bodyMat);
-        body.rotation.z = Math.PI / 2.2;
-        body.scale.set(1, 0.9, 0.85);
-        group.add(body, leaf);
-        break;
-      case "Orange":
-        body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 20), bodyMat);
-        body.scale.set(1.05, 0.95, 1.05);
-        group.add(body, leaf);
-        break;
-      case "Mango":
-        body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 20), bodyMat);
-        body.scale.set(1.1, 0.85, 0.9);
-        body.rotation.z = 0.14;
-        group.add(body, leaf);
-        break;
-      case "Strawberry":
-        body = new THREE.Mesh(new THREE.SphereGeometry(0.26, 20, 20), bodyMat);
-        body.scale.set(0.92, 1.04, 0.92);
-        const stem = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 8), this.softMaterial(0x4caf50));
-        stem.position.y = 0.36;
-        group.add(body, leaf, stem);
-        break;
-      case "Grapes":
-        body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), bodyMat);
-        body.position.set(-0.12, 0.03, 0.03);
-        const grape2 = body.clone(); grape2.position.set(0.1, 0.05, -0.03);
-        const grape3 = body.clone(); grape3.position.set(0.02, 0.16, 0.04);
-        const grape4 = body.clone(); grape4.position.set(-0.02, -0.1, -0.05);
-        group.add(body, grape2, grape3, grape4, leaf);
-        break;
-      case "Watermelon":
-        body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 20), bodyMat);
-        body.scale.set(1.25, 0.9, 0.95);
-        const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.03, 8, 18), this.softMaterial(0xfff7f0));
-        stripe.rotation.x = Math.PI / 2;
-        stripe.position.y = 0.06;
-        group.add(body, stripe, leaf);
-        break;
-      case "Pineapple":
-        body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.42, 12), bodyMat);
-        body.rotation.z = Math.PI / 2.2;
-        const top = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.2, 12), this.softMaterial(0x6BCB77));
-        top.position.y = 0.3;
-        group.add(body, top, leaf);
-        break;
-      default:
-        body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), bodyMat);
-        group.add(body, leaf);
-    }
+    leaf.position.y = 0.32;
+    if (!["Carrot"].includes(fruitData.name)) group.add(leaf);
     group.position.copy(position);
     group.userData = {
       kind: "fruit",
@@ -448,65 +331,23 @@ const Objects = {
   // =========================================================================
   createAnimal(position, animalData) {
     const group = new THREE.Group();
-    const bodyColor = this.softMaterial(animalData.color);
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), bodyColor);
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), this.softMaterial(animalData.color));
     body.scale.set(1, 0.9, 1.1);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), bodyColor);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), this.softMaterial(animalData.color));
     head.position.set(0, 0.32, 0.22);
-
+    this.addFace(head, 0.2);
     const earGeo = new THREE.SphereGeometry(0.07, 8, 8);
     const earMat = this.softMaterial(animalData.color);
     const earL = new THREE.Mesh(earGeo, earMat); earL.position.set(-0.14, 0.46, 0.2);
     const earR = new THREE.Mesh(earGeo, earMat); earR.position.set(0.14, 0.46, 0.2);
-
     const legGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.18, 8);
     const legMat = this.softMaterial(animalData.color);
     const legs = [[-0.15, -0.28, 0.15], [0.15, -0.28, 0.15], [-0.15, -0.28, -0.15], [0.15, -0.28, -0.15]]
       .map(p => { const l = new THREE.Mesh(legGeo, legMat); l.position.set(...p); return l; });
-
-    const tailGeo = new THREE.ConeGeometry(0.06, 0.24, 8);
-    const tail = new THREE.Mesh(tailGeo, bodyColor);
-    tail.position.set(-0.25, 0.05, -0.2);
-    tail.rotation.z = -0.7;
-
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), this.softMaterial(0x3a3a3a));
-    nose.position.set(0.0, 0.24, 0.42);
-
-    const earScaleMap = { Lion: [1.5, 1], Elephant: [1.3, 1.8], Tiger: [1.4, 1.2], Rabbit: [1.8, 1.8], Monkey: [1.2, 1], Panda: [1.2, 1.4], Giraffe: [2.6, 1.6], Zebra: [1.2, 1.2] };
-    const scale = earScaleMap[animalData.name] || [1.2, 1.2];
-    earL.scale.set(scale[0], scale[1], 1);
-    earR.scale.set(scale[0], scale[1], 1);
-    if (animalData.name === "Elephant") { head.scale.set(1.15, 1.0, 1.1); body.scale.set(1.1, 0.95, 1.2); }
-    if (animalData.name === "Giraffe") { head.scale.set(1.0, 1.15, 1.1); body.scale.set(0.95, 0.85, 1.0); }
-    if (animalData.name === "Zebra") { body.scale.set(1.0, 0.9, 1.18); }
-    if (animalData.name === "Rabbit") { earL.position.y = 0.62; earR.position.y = 0.62; }
-
-    if (animalData.kind === "bird") {
-      const wingGeo = new THREE.CircleGeometry(0.16, 12);
-      const wingMat = this.softMaterial(animalData.color, { side: THREE.DoubleSide });
-      const wingL = new THREE.Mesh(wingGeo, wingMat); wingL.position.set(-0.18, 0.16, 0.0); wingL.rotation.z = 0.2;
-      const wingR = new THREE.Mesh(wingGeo, wingMat); wingR.position.set(0.18, 0.16, 0.0); wingR.rotation.z = -0.2;
-      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 8), this.softMaterial(0xff9f43));
-      beak.position.set(0, 0.22, 0.48);
-      beak.rotation.x = Math.PI / 2;
-      this.addFace(head, 0.2);
-      group.add(wingL, wingR, beak);
-      head.scale.set(0.9, 0.95, 0.9);
-    } else if (animalData.kind === "ocean") {
-      const finL = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 8), bodyColor); finL.position.set(-0.2, 0.02, 0.1); finL.rotation.z = Math.PI / 2;
-      const finR = finL.clone(); finR.position.set(0.2, 0.02, 0.1); finR.rotation.z = -Math.PI / 2;
-      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.24, 8), bodyColor); tail.position.set(-0.34, 0.06, -0.1); tail.rotation.z = -Math.PI / 2;
-      body.scale.set(1.25, 0.82, 1.2);
-      head.scale.set(0.95, 0.9, 1.0);
-      group.add(finL, finR, tail);
-    } else {
-      this.addFace(head, 0.2);
-    }
-
-    group.add(body, head, earL, earR, nose, tail, ...legs);
+    group.add(body, head, earL, earR, ...legs);
     group.position.copy(position);
     group.userData = {
-      kind: animalData.kind === "bird" ? "bird" : animalData.kind === "ocean" ? "ocean" : "animal",
+      kind: "animal",
       label: animalData.name,
       interactive: true,
       dancing: false,
@@ -526,8 +367,8 @@ const Objects = {
         this.danceT = 0;
         app.particles.burstSparkles(group.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.4, 0)), 16);
         app.audio.playSuccess();
-        app.speech.speak(`${animalData.name}! ${animalData.name} says ${animalData.sound}!`);
-        app.reward(0.5, animalData.kind === "bird" ? "bird" : animalData.kind === "ocean" ? "ocean" : "animal");
+        app.speech.speak(`${animalData.name}!`);
+        app.reward(0.5, "animal");
       }
     };
     return group;
@@ -596,97 +437,6 @@ const Objects = {
         app.audio.playRain();
         app.speech.speak("Rain! And a rainbow!");
         app.reward(0.5);
-      }
-    };
-    return group;
-  },
-
-  // =========================================================================
-  // VEHICLE - adds a cheerful cartoony ride with bounce and speech
-  // =========================================================================
-  createVehicle(position, vehicleData) {
-    const group = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.25, 0.45), this.softMaterial(vehicleData.color, { roughness: 0.45 }));
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.32), this.softMaterial(0xffffff, { roughness: 0.6 }));
-    cabin.position.set(0.08, 0.16, 0);
-    const wheelGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.06, 12);
-    const wheelMat = this.softMaterial(0x3a3a3a, { roughness: 0.9 });
-    const wheels = [[-0.22, -0.18, 0.18], [0.22, -0.18, 0.18], [-0.22, -0.18, -0.18], [0.22, -0.18, -0.18]]
-      .map(p => { const w = new THREE.Mesh(wheelGeo, wheelMat); w.rotation.z = Math.PI / 2; w.position.set(...p); return w; });
-    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 10), this.softMaterial(0xFFD93D));
-    glow.position.set(0.34, 0.03, 0);
-    group.add(body, cabin, glow, ...wheels);
-    group.position.copy(position);
-    group.userData = {
-      kind: "vehicle",
-      label: vehicleData.name,
-      interactive: true,
-      idle(t) {
-        group.position.y = position.y + Math.sin(t * 1.4) * 0.06;
-        group.rotation.y = Math.sin(t * 0.6) * 0.08;
-      },
-      onInteract(app) {
-        app.particles.burstSparkles(group.getWorldPosition(new THREE.Vector3()), 18);
-        app.audio.playNote(GAME_DATA.notes[0]);
-        app.speech.speak(`${vehicleData.name}! ${vehicleData.name} is zooming!`);
-        app.reward(0.5, "vehicle");
-      }
-    };
-    return group;
-  },
-
-  // =========================================================================
-  // INSTRUMENT - tap to hear a cheerful instrument sound
-  // =========================================================================
-  createInstrument(position, instrumentData) {
-    const group = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.45, 12), this.softMaterial(instrumentData.color, { roughness: 0.35, metalness: 0.25 }));
-    const top = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), this.softMaterial(0xffffff, { roughness: 0.7 }));
-    top.position.y = 0.2;
-    group.add(body, top);
-    if (instrumentData.name === "Guitar") {
-      body.geometry = new THREE.BoxGeometry(0.6, 0.12, 0.18);
-      body.scale.set(1, 1.0, 1.0);
-      body.rotation.z = 0.45;
-      top.scale.set(0.8, 0.9, 0.9);
-      top.position.set(0.1, 0.06, 0);
-    }
-    if (instrumentData.name === "Violin") {
-      body.geometry = new THREE.CylinderGeometry(0.12, 0.12, 0.6, 10);
-      body.rotation.z = Math.PI / 2;
-      top.scale.set(0.5, 0.6, 0.5);
-    }
-    if (instrumentData.name === "Drum") {
-      body.geometry = new THREE.CylinderGeometry(0.24, 0.24, 0.2, 12);
-      top.scale.set(0.6, 0.5, 0.6);
-      top.position.y = 0.1;
-    }
-    if (instrumentData.name === "Piano") {
-      body.geometry = new THREE.BoxGeometry(0.5, 0.3, 0.25);
-      top.scale.set(0.85, 0.7, 0.8);
-    }
-    if (instrumentData.name === "Trumpet") {
-      body.geometry = new THREE.ConeGeometry(0.12, 0.5, 12);
-      body.rotation.z = Math.PI / 2;
-    }
-    if (instrumentData.name === "Xylophone") {
-      body.geometry = new THREE.BoxGeometry(0.7, 0.1, 0.2);
-      top.scale.set(0.45, 0.5, 0.45);
-    }
-    group.position.copy(position);
-    group.userData = {
-      kind: "instrument",
-      label: instrumentData.name,
-      interactive: true,
-      idle(t) {
-        group.rotation.y += 0.004;
-        group.position.y = position.y + Math.sin(t * 1.3) * 0.08;
-      },
-      onInteract(app) {
-        app.particles.burstSparkles(group.getWorldPosition(new THREE.Vector3()), 16);
-        app.audio.playNote(GAME_DATA.notes[Math.floor(Math.random() * GAME_DATA.notes.length)]);
-        app.speech.speak(`${instrumentData.name}! Let's play ${instrumentData.name}!`);
-        app.reward(0.5, "instrument");
       }
     };
     return group;

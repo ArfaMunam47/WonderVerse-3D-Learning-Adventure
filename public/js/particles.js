@@ -13,14 +13,11 @@
 
 class ParticleSystem {
   constructor(scene) {
-    // Backward-compat: newer bubble/cursor effects rely on these helpers.
-    // (If a method isn't defined, the game should still run without crashing.)
     this.scene = scene;
     this.active = []; // { sprite, velocity, life, maxLife, gravity, spin }
     this.animSpeedMultiplier = 1.0; // tied to accessibility "animation speed" setting
 
     this._sparkleTexture = this._makeCircleTexture("#FFFFFF");
-    this._starTexture = this._makeStarTexture("#FFD93D");
     this._confettiColors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#A66DD4", "#FF8FC7"];
   }
 
@@ -49,27 +46,6 @@ class ParticleSystem {
     return new THREE.CanvasTexture(canvas);
   }
 
-  _makeStarTexture(color) {
-    const size = 64;
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, size, size);
-    ctx.translate(size / 2, size / 2);
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const angle = (Math.PI / 5) * i - Math.PI / 2;
-      const radius = i % 2 === 0 ? size / 2.6 : size / 6.2;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.fill();
-    return new THREE.CanvasTexture(canvas);
-  }
-
   /** Rainbow sparkle burst - used for bubbles, stars, general "tap" reward */
   burstSparkles(position, count = 22) {
     for (let i = 0; i < count; i++) {
@@ -94,32 +70,6 @@ class ParticleSystem {
         life: 0,
         maxLife: 50 + Math.random() * 30,
         gravity: -0.0015,
-        fade: true
-      });
-    }
-  }
-
-  /** Fancy star burst for successful pops and cheerful victories */
-  burstStars(position, count = 14) {
-    for (let i = 0; i < count; i++) {
-      const material = new THREE.SpriteMaterial({
-        map: this._starTexture,
-        color: new THREE.Color(`hsl(${Math.floor(Math.random() * 360)}, 90%, 68%)`),
-        transparent: true,
-        depthWrite: false
-      });
-      const sprite = new THREE.Sprite(material);
-      const scale = 0.09 + Math.random() * 0.12;
-      sprite.scale.set(scale, scale, 1);
-      sprite.position.copy(position);
-      this.scene.add(sprite);
-      this.active.push({
-        sprite,
-        velocity: new THREE.Vector3((Math.random() - 0.5) * 0.06, 0.03 + Math.random() * 0.06, (Math.random() - 0.5) * 0.06),
-        life: 0,
-        maxLife: 70 + Math.random() * 30,
-        gravity: -0.0018,
-        spin: (Math.random() - 0.5) * 0.2,
         fade: true
       });
     }
@@ -180,65 +130,6 @@ class ParticleSystem {
         gravity: 0,
         fade: false,
         stopAtGround: true
-      });
-    }
-  }
-
-  /** Bright rainbow pop (bubble-like) */
-  burstRainbowPop(position, count = 26) {
-    const colors = ["#4D96FF", "#6BCB77", "#FFD93D", "#FF8FC7", "#A66DD4"];
-    for (let i = 0; i < count; i++) {
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      const material = new THREE.SpriteMaterial({
-        map: this._sparkleTexture,
-        color: new THREE.Color(color),
-        transparent: true,
-        depthWrite: false
-      });
-      const sprite = new THREE.Sprite(material);
-      const scale = 0.12 + Math.random() * 0.22;
-      sprite.scale.set(scale, scale, 1);
-      sprite.position.copy(position);
-      this.scene.add(sprite);
-
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.04 + Math.random() * 0.06;
-      this.active.push({
-        sprite,
-        velocity: new THREE.Vector3(Math.cos(angle) * speed, 0.08 + Math.random() * 0.05, Math.sin(angle) * speed),
-        life: 0,
-        maxLife: 55 + Math.random() * 25,
-        gravity: -0.002,
-        fade: true
-      });
-    }
-  }
-
-  /** Floating stars used after a pop */
-  floatStars(position, count = 8) {
-    for (let i = 0; i < count; i++) {
-      const material = new THREE.SpriteMaterial({
-        map: this._starTexture,
-        color: new THREE.Color(`hsl(${Math.floor(Math.random() * 360)}, 90%, 70%)`),
-        transparent: true,
-        depthWrite: false
-      });
-      const sprite = new THREE.Sprite(material);
-      const scale = 0.09 + Math.random() * 0.11;
-      sprite.scale.set(scale, scale, 1);
-      sprite.position.copy(position);
-      sprite.position.x += (Math.random() - 0.5) * 0.3;
-      sprite.position.z += (Math.random() - 0.5) * 0.3;
-      this.scene.add(sprite);
-
-      this.active.push({
-        sprite,
-        velocity: new THREE.Vector3((Math.random() - 0.5) * 0.01, 0.02 + Math.random() * 0.03, (Math.random() - 0.5) * 0.01),
-        life: 0,
-        maxLife: 70 + Math.random() * 20,
-        gravity: 0,
-        spin: (Math.random() - 0.5) * 0.25,
-        fade: true
       });
     }
   }

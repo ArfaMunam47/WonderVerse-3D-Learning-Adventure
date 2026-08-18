@@ -1,43 +1,46 @@
 /* =============================================================================
-   style.css — Wonder Meadow
-   A warm, rounded, storybook-premium visual language:
-   sky blues, meadow greens, sunshine yellow, and soft coral accents.
+   style.css — Wonder Meadow (Premium Redesign)
+   Storybook-premium visual language: sky blues, meadow greens, sunshine
+   yellow, coral + lilac accents, glassy floating cards, and a set of
+   "premium" interaction layers: animated shader-line backdrop, circular
+   spotlight hover, and card shuffle/spread choreography.
    ============================================================================= */
 
 :root {
-  --sky-blue:     #4D96FF;
-  --sky-blue-deep:#2E6FE0;
-  --meadow-green: #6BCB77;
-  --sunshine:     #FFD93D;
-  --coral:        #FF8FC7;
-  --lilac:        #A66DD4;
-  --cream:        #FFF8E7;
-  --ink:          #33334D;
-  --white:        #FFFFFF;
+  --sky-blue:      #4D96FF;
+  --sky-blue-deep: #2E6FE0;
+  --meadow-green:  #6BCB77;
+  --sunshine:      #FFD93D;
+  --coral:         #FF8FC7;
+  --lilac:         #A66DD4;
+  --cream:         #FFF8E7;
+  --ink:           #33334D;
+  --white:         #FFFFFF;
 
-  /* Extra pastel accents for a livelier, more colorful UI throughout */
-  --pastel-blue:  #EAF4FF;
-  --pastel-green: #EAFBEA;
-  --pastel-yellow:#FFF6D9;
-  --pastel-pink:  #FFF0F8;
-  --pastel-purple:#F3EBFF;
+  --pastel-blue:   #EAF4FF;
+  --pastel-green:  #EAFBEA;
+  --pastel-yellow: #FFF6D9;
+  --pastel-pink:   #FFF0F8;
+  --pastel-purple: #F3EBFF;
 
   --radius-lg: 28px;
   --radius-md: 18px;
   --radius-sm: 12px;
 
-  --shadow-soft: 0 12px 30px rgba(46, 70, 130, 0.18);
-  --shadow-pop:  0 6px 16px rgba(46, 70, 130, 0.22);
-  /* Layered "floating card" depth - used by anything meant to feel like it's
-     hovering above the world (menu cards, HUD pills, game tiles) */
-  --shadow-float: 0 4px 10px rgba(46,70,130,0.10), 0 16px 34px rgba(46,70,130,0.20);
-  --shadow-float-hover: 0 8px 16px rgba(46,70,130,0.14), 0 26px 46px rgba(46,70,130,0.26);
+  --shadow-soft:        0 12px 30px rgba(46, 70, 130, 0.18);
+  --shadow-pop:         0 6px 16px rgba(46, 70, 130, 0.22);
+  --shadow-float:       0 4px 10px rgba(46,70,130,0.10), 0 16px 34px rgba(46,70,130,0.20);
+  --shadow-float-hover: 0 10px 20px rgba(46,70,130,0.16), 0 30px 54px rgba(46,70,130,0.28);
 
   --font-display: 'Baloo 2', system-ui, sans-serif;
   --font-body: 'Quicksand', system-ui, sans-serif;
 
   --anim-fast: 0.2s;
   --anim-med: 0.4s;
+
+  /* circle-hover spotlight position, updated live by js/spotlight.js */
+  --mx: 50%;
+  --my: 50%;
 }
 
 * { box-sizing: border-box; }
@@ -56,22 +59,34 @@ html, body {
 .hidden { display: none !important; }
 
 /* ---------------------------------------------------------------------------
+   Shader-line backdrop (premium ambient background, js/shader-bg.js)
+   A fullscreen WebGL canvas sitting behind every menu screen, rendering soft
+   animated flowing lines. Disabled automatically under reduced-motion.
+--------------------------------------------------------------------------- */
+#shader-bg {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.55;
+}
+body.reduced-motion #shader-bg { display: none; }
+/* Menu screens sit above the shader backdrop but keep it visible around them */
+.screen { z-index: 50; background: radial-gradient(circle at 50% 20%, rgba(205,234,255,0.55), rgba(127,192,255,0.35) 65%); }
+#loading-screen { z-index: 100; }
+
+/* ---------------------------------------------------------------------------
    Loading screen
 --------------------------------------------------------------------------- */
 #loading-screen {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(160deg, #6fb7ff, #a6d8ff 55%, #fff3d6);
-  z-index: 100;
   transition: opacity 0.6s ease;
 }
-#loading-screen.fade-out { opacity: 0; pointer-events: none; }
+#loading-screen.fade-out { opacity: 0; }
 
-.loading-inner {
-  text-align: center;
-  padding: 40px;
-  z-index: 2;
-}
+.loading-inner { text-align: center; padding: 40px; z-index: 2; }
 
 .logo-badge {
   width: 120px; height: 120px;
@@ -85,6 +100,9 @@ html, body {
 @keyframes spinSlow { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
 @keyframes floatY { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-10px);} }
 
+/* Hero title — FIXED: was solid white, invisible on the white menu card.
+   Now a bright kid-friendly gradient with a soft white outline + shadow so
+   it reads clearly on both the blue loading screen and white cards. */
 .game-title {
   font-family: var(--font-display);
   font-size: clamp(2.3rem, 6.5vw, 3.6rem);
@@ -92,15 +110,11 @@ html, body {
   margin: 0 0 4px;
   letter-spacing: 0.5px;
   display: inline-block;
-  /* Bright, colorful gradient fill instead of solid white - this is what fixes
-     the "invisible on white card" bug, since a gradient reads clearly on both
-     the blue loading screen AND the white menu card. */
   background: linear-gradient(90deg, #4D96FF 0%, #6BCB77 35%, #FFD93D 68%, #FF9F43 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: #FFD93D; /* fallback for browsers without background-clip:text support */
-  /* Soft white outline keeps the gradient crisp against any background */
+  color: #FFD93D;
   -webkit-text-stroke: 1.5px rgba(255,255,255,0.85);
   paint-order: stroke fill;
   filter: drop-shadow(0 4px 0 rgba(46,70,130,0.22)) drop-shadow(0 10px 18px rgba(46,70,130,0.28));
@@ -111,45 +125,32 @@ html, body {
   50% { transform: translateY(-6px) rotate(-0.6deg); }
 }
 body.reduced-motion .game-title { animation: none; }
+
 .game-subtitle {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--sky-blue-deep);
   margin: 0 0 28px;
 }
-/* Loading screen has a colorful blue background, so its subtitle stays white */
 #loading-screen .game-subtitle { color: rgba(255,255,255,0.95); }
 
 .loading-bar-track {
-  width: min(340px, 70vw);
-  height: 18px;
-  background: rgba(255,255,255,0.4);
-  border-radius: 20px;
-  margin: 0 auto 14px;
-  overflow: hidden;
+  width: min(340px, 70vw); height: 18px;
+  background: rgba(255,255,255,0.4); border-radius: 20px;
+  margin: 0 auto 14px; overflow: hidden;
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.12);
 }
 .loading-bar-fill {
-  height: 100%;
-  width: 0%;
+  height: 100%; width: 0%;
   background: linear-gradient(90deg, var(--sunshine), var(--coral));
-  border-radius: 20px;
-  transition: width 0.25s ease;
+  border-radius: 20px; transition: width 0.25s ease;
 }
-.loading-hint {
-  color: rgba(255,255,255,0.95);
-  font-weight: 600;
-  font-size: 0.95rem;
-}
+.loading-hint { color: rgba(255,255,255,0.95); font-weight: 600; font-size: 0.95rem; }
 
 .floating-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .floating-shapes::before, .floating-shapes::after {
-  content: "";
-  position: absolute;
-  width: 60px; height: 60px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.35);
-  animation: driftUp 9s linear infinite;
+  content: ""; position: absolute; width: 60px; height: 60px; border-radius: 50%;
+  background: rgba(255,255,255,0.35); animation: driftUp 9s linear infinite;
 }
 .floating-shapes::before { left: 15%; animation-delay: 0s; }
 .floating-shapes::after { left: 70%; width: 40px; height: 40px; animation-delay: 3s; }
@@ -161,14 +162,13 @@ body.reduced-motion .game-title { animation: none; }
 .screen {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(circle at 50% 20%, #cdeaff, #9fd0ff 60%, #7fc0ff);
-  z-index: 50;
   padding: 20px;
   overflow-y: auto;
 }
 
 .menu-card {
-  background: var(--white);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-float);
   padding: clamp(24px, 4vw, 44px);
@@ -176,53 +176,56 @@ body.reduced-motion .game-title { animation: none; }
   max-height: 92vh;
   overflow-y: auto;
   text-align: center;
-  animation: cardIn 0.35s ease;
+  animation: cardIn 0.4s cubic-bezier(.22,1.4,.36,1);
   border-top: 6px solid transparent;
   border-image: linear-gradient(90deg, var(--sky-blue), var(--meadow-green), var(--sunshine), var(--coral)) 1;
+  position: relative;
 }
-.menu-card.wide { width: min(720px, 94vw); }
+.menu-card.wide { width: min(760px, 94vw); }
 
 @keyframes cardIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  from { opacity: 0; transform: translateY(24px) scale(0.94); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .panel-title {
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  color: var(--ink);
-  margin: 4px 0 6px;
+  font-family: var(--font-display); font-size: 1.8rem; color: var(--ink); margin: 4px 0 6px;
 }
 .panel-subtitle { font-weight: 700; color: var(--sky-blue-deep); margin: 0 0 16px; }
 .panel-subtitle.small { font-size: 0.95rem; font-weight: 600; color: #6c7a99; }
 
 /* ---------------------------------------------------------------------------
-   Buttons
+   Buttons — with circle-hover spotlight + depth lift
 --------------------------------------------------------------------------- */
 .menu-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
 
 .btn {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 700;
-  border: none;
-  border-radius: 999px;
-  padding: 16px 22px;
-  cursor: pointer;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  border: none; border-radius: 999px; padding: 16px 22px; cursor: pointer;
   transition: transform var(--anim-fast) ease, box-shadow var(--anim-fast) ease, filter var(--anim-fast);
-  box-shadow: var(--shadow-pop);
-  min-height: 52px;
+  box-shadow: var(--shadow-pop); min-height: 52px;
+  position: relative; overflow: hidden; isolation: isolate;
 }
 .btn:active { transform: scale(0.96); }
 .btn:focus-visible { outline: 3px solid var(--sky-blue-deep); outline-offset: 3px; }
-@media (pointer: fine) {
-  .btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: var(--shadow-float-hover); }
-}
 
 .btn-primary { background: linear-gradient(135deg, var(--sky-blue), var(--sky-blue-deep)); color: var(--white); }
 .btn-secondary { background: linear-gradient(135deg, #ffe27a, var(--sunshine)); color: #5a4300; }
 .btn-tertiary { background: #f0f2fa; color: var(--ink); box-shadow: none; }
 .btn:hover { filter: brightness(1.05); }
+
+@media (pointer: fine) {
+  .btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: var(--shadow-float-hover); }
+  /* Circle-hover: a soft radial glow that follows the cursor inside the button */
+  .spotlight::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(circle 90px at var(--mx) var(--my), rgba(255,255,255,0.55), transparent 70%);
+    opacity: 0; transition: opacity var(--anim-fast);
+    pointer-events: none; z-index: 1;
+  }
+  .spotlight:hover::before { opacity: 1; }
+}
 
 /* ---------------------------------------------------------------------------
    How-to list
@@ -234,23 +237,18 @@ body.reduced-motion .game-title { animation: none; }
    Settings
 --------------------------------------------------------------------------- */
 .settings-list { display: flex; flex-direction: column; gap: 16px; text-align: left; margin: 10px 0 20px; }
-.setting-row {
-  display: flex; align-items: center; justify-content: space-between;
-  font-weight: 700; gap: 14px;
-}
+.setting-row { display: flex; align-items: center; justify-content: space-between; font-weight: 700; gap: 14px; }
 .setting-row input[type="range"] { flex: 1; max-width: 160px; accent-color: var(--sky-blue); height: 8px; }
 
 .toggle-row { position: relative; }
 .toggle-input { position: absolute; opacity: 0; width: 42px; height: 24px; margin: 0; cursor: pointer; }
 .toggle-track {
   width: 46px; height: 26px; background: #dfe6f5; border-radius: 20px; position: relative;
-  transition: background var(--anim-fast);
-  flex-shrink: 0;
+  transition: background var(--anim-fast); flex-shrink: 0;
 }
 .toggle-thumb {
   position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  transition: transform var(--anim-fast);
+  background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform var(--anim-fast);
 }
 .toggle-input:checked + .toggle-track { background: var(--meadow-green); }
 .toggle-input:checked + .toggle-track .toggle-thumb { transform: translateX(20px); }
@@ -262,17 +260,11 @@ body.reduced-motion .game-title { animation: none; }
    Achievements / progress
 --------------------------------------------------------------------------- */
 .progress-summary { text-align: left; margin: 12px 0 20px; }
-.progress-item {
-  display: flex; justify-content: space-between; padding: 8px 4px;
-  border-bottom: 1px dashed #e3e8f5; font-weight: 700;
-}
+.progress-item { display: flex; justify-content: space-between; padding: 8px 4px; border-bottom: 1px dashed #e3e8f5; font-weight: 700; }
 .progress-item.total { color: var(--sky-blue-deep); }
 .progress-count { color: #6c7a99; }
 
-.badge-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 14px; margin-bottom: 20px;
-}
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .badge {
   background: var(--cream); border-radius: var(--radius-md); padding: 14px 8px;
   text-align: center; font-weight: 700; font-size: 0.85rem;
@@ -284,24 +276,36 @@ body.reduced-motion .game-title { animation: none; }
 .badge.earned:nth-child(4n+4) { background: var(--pastel-pink); }
 .badge.locked { opacity: 0.45; }
 .badge-icon { font-size: 2rem; margin-bottom: 6px; }
-@media (pointer: fine) {
-  .badge.earned:hover { transform: translateY(-3px) scale(1.05); }
-}
+@media (pointer: fine) { .badge.earned:hover { transform: translateY(-3px) scale(1.05); } }
 
 /* ---------------------------------------------------------------------------
    Learning games hub + Matching game + Memory game
 --------------------------------------------------------------------------- */
-.game-tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 16px 0 24px; }
+.game-tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 16px 0 24px; perspective: 900px; }
 .game-tile {
   background: var(--cream); border: none; border-radius: var(--radius-md);
   padding: 24px 10px; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem;
-  cursor: pointer; box-shadow: var(--shadow-float); transition: transform var(--anim-fast), box-shadow var(--anim-fast);
+  cursor: pointer; box-shadow: var(--shadow-float);
+  transition: transform var(--anim-fast), box-shadow var(--anim-fast);
+  position: relative; overflow: hidden; isolation: isolate;
 }
 .game-tile:active { transform: scale(0.96); }
-@media (pointer: fine) {
-  .game-tile:hover { transform: translateY(-4px) scale(1.03); box-shadow: var(--shadow-float-hover); }
-}
 .game-tile-emoji { display: block; font-size: 2.4rem; margin-bottom: 8px; }
+@media (pointer: fine) { .game-tile:hover { transform: translateY(-4px) scale(1.03); box-shadow: var(--shadow-float-hover); } }
+
+/* --- Card shuffle-in: cards enter like a riffled deck settling into place ---
+   Applied by js/card-effects.js (adds/removes .shuffle-card + inline style
+   custom properties per card, staggered with a short delay). */
+.shuffle-card {
+  animation: shuffleIn 0.55s cubic-bezier(.2,1.4,.4,1) both;
+  animation-delay: var(--shuffle-delay, 0s);
+}
+@keyframes shuffleIn {
+  0%   { transform: translate(var(--shuffle-fromx,0), var(--shuffle-fromy,0)) rotate(var(--shuffle-rot,0deg)) scale(0.7); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+}
+body.reduced-motion .shuffle-card { animation: none; }
 
 .matching-board { display: flex; gap: 24px; justify-content: center; margin: 16px 0 22px; }
 .matching-col { display: flex; flex-direction: column; gap: 10px; flex: 1; max-width: 220px; }
@@ -316,10 +320,7 @@ body.reduced-motion .game-title { animation: none; }
 .match-card.shake { animation: shake 0.4s; }
 @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
 
-.memory-board {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
-  max-width: 420px; margin: 16px auto 22px;
-}
+.memory-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 420px; margin: 16px auto 22px; }
 .memory-card {
   aspect-ratio: 1; border-radius: var(--radius-sm); border: none; cursor: pointer;
   background: linear-gradient(135deg, var(--sky-blue), var(--lilac));
@@ -336,19 +337,33 @@ body.reduced-motion .game-title { animation: none; }
 .memory-card.matched { opacity: 0.55; }
 
 /* ---------------------------------------------------------------------------
-   World map
+   World map — with card-spread choreography
 --------------------------------------------------------------------------- */
-.world-tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 16px 0 22px; }
+.world-tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 16px 0 22px; perspective: 900px; }
 .world-tile {
   background: linear-gradient(135deg, #eaf4ff, #dcefff);
   border: none; border-radius: var(--radius-md); padding: 20px 10px;
   font-family: var(--font-display); font-weight: 700; font-size: 1rem;
-  cursor: pointer; box-shadow: var(--shadow-float); transition: transform var(--anim-fast), box-shadow var(--anim-fast);
+  cursor: pointer; box-shadow: var(--shadow-float);
+  transition: transform var(--anim-fast), box-shadow var(--anim-fast);
+  position: relative; overflow: hidden; isolation: isolate;
 }
 .world-tile:active { transform: scale(0.95); }
-@media (pointer: fine) {
-  .world-tile:hover { transform: translateY(-4px) scale(1.03); box-shadow: var(--shadow-float-hover); }
+@media (pointer: fine) { .world-tile:hover { transform: translateY(-4px) scale(1.03); box-shadow: var(--shadow-float-hover); } }
+
+/* --- Card spread: tiles start stacked dead-center like a closed hand of
+   cards, then fan out into their grid position on open. Distinct from
+   shuffle (no rotation-settle "riffle" feel, just a clean spread-outward
+   motion) so the two features read as different premium touches. */
+.spread-card {
+  animation: spreadOut 0.6s cubic-bezier(.16,1.2,.3,1) both;
+  animation-delay: var(--spread-delay, 0s);
 }
+@keyframes spreadOut {
+  0%   { transform: translate(var(--spread-fromx,0), var(--spread-fromy,0)) scale(0.5); opacity: 0; }
+  100% { transform: translate(0,0) scale(1); opacity: 1; }
+}
+body.reduced-motion .spread-card { animation: none; }
 
 /* ---------------------------------------------------------------------------
    Game layer: canvas + HUD
@@ -359,8 +374,7 @@ body.reduced-motion .game-title { animation: none; }
 #hud-top {
   position: absolute; top: 0; left: 0; right: 0;
   display: flex; align-items: center; gap: 10px;
-  padding: 16px 18px; z-index: 11;
-  pointer-events: none;
+  padding: 16px 18px; z-index: 11; pointer-events: none;
 }
 .hud-spacer { flex: 1; }
 .hud-pill, .hud-btn { pointer-events: all; }
@@ -403,11 +417,27 @@ body.reduced-motion .game-title { animation: none; }
 .toast-label { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: #5a4300; }
 
 /* ---------------------------------------------------------------------------
+   Custom cursor — magic sparkle, desktop only
+--------------------------------------------------------------------------- */
+@media (pointer: fine) {
+  body.custom-cursor-active, body.custom-cursor-active * { cursor: none !important; }
+  #magic-cursor {
+    position: fixed; top: 0; left: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+    pointer-events: none; z-index: 999999; opacity: 0; transition: opacity 0.25s ease; will-change: transform;
+  }
+  #magic-cursor.visible { opacity: 1; }
+  .cursor-sparkle { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 4px rgba(46,70,130,0.35)); animation: cursorSpin 5s linear infinite; transform-origin: center; }
+  #magic-cursor.clicking .cursor-sparkle { animation-duration: 0.6s; }
+  .cursor-trail { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255,217,61,0.35), transparent 70%); transform: scale(1); transition: transform 0.3s ease; }
+  #magic-cursor.clicking .cursor-trail { transform: scale(1.6); }
+  @keyframes cursorSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+}
+body.reduced-motion #magic-cursor { display: none; }
+
+/* ---------------------------------------------------------------------------
    Accessibility modes
 --------------------------------------------------------------------------- */
-body.high-contrast {
-  --ink: #000000;
-}
+body.high-contrast { --ink: #000000; }
 body.high-contrast .menu-card { border: 4px solid #000; }
 body.high-contrast .btn { border: 3px solid #000; }
 body.high-contrast .hud-pill, body.high-contrast .hud-btn { border: 3px solid #000; }
@@ -434,46 +464,3 @@ body.reduced-motion * { animation-duration: 0.001s !important; transition-durati
 @media (min-width: 900px) {
   .memory-board { max-width: 480px; }
 }
-
-/* =============================================================================
-   Custom cursor - a gentle magic sparkle that follows the pointer.
-   Desktop/mouse only: touch devices never see it (there's no cursor to
-   replace, and it would just be a stray floating icon), and it's fully
-   skipped under reduced-motion for sensory-sensitive players.
-   ============================================================================= */
-@media (pointer: fine) {
-  body.custom-cursor-active, body.custom-cursor-active * {
-    cursor: none !important;
-  }
-  #magic-cursor {
-    position: fixed;
-    top: 0; left: 0;
-    width: 40px; height: 40px;
-    margin: -20px 0 0 -20px; /* centers the icon on the tracked point */
-    pointer-events: none;
-    z-index: 999999;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    will-change: transform;
-  }
-  #magic-cursor.visible { opacity: 1; }
-  .cursor-sparkle {
-    width: 100%; height: 100%;
-    display: block;
-    filter: drop-shadow(0 2px 4px rgba(46,70,130,0.35));
-    animation: cursorSpin 5s linear infinite;
-    transform-origin: center;
-  }
-  #magic-cursor.clicking .cursor-sparkle { animation-duration: 0.6s; }
-  .cursor-trail {
-    position: absolute; inset: 0;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,217,61,0.35), transparent 70%);
-    transform: scale(1);
-    transition: transform 0.3s ease;
-  }
-  #magic-cursor.clicking .cursor-trail { transform: scale(1.6); }
-  @keyframes cursorSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-}
-/* Never show the custom cursor on touch devices or in reduced-motion mode */
-body.reduced-motion #magic-cursor { display: none; }

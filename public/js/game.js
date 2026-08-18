@@ -101,9 +101,6 @@ class App {
     this.world = new World(this.scene);
     this.particles = new ParticleSystem(this.scene);
     this.particles.animSpeedMultiplier = this.settings.reducedMotion ? 0.5 : this.settings.animationSpeed;
-    
-    // Initialize environment system (day/night cycle, weather)
-    this.environment = new Environment(this.scene, this.world.sky, this.world.sunLight, this.particles);
   }
 
   _initCameraRig() {
@@ -241,7 +238,8 @@ class App {
   resume() { this.paused = false; }
 
   resetProgress() {
-    localStorage.removeItem(SAVE_KEY); this.progress = this._loadProgress();
+    localStorage.removeItem(SAVE_KEY);
+    this.progress = this._loadProgress();
     this.settings = this.progress.settings;
     this.applySettingsLive();
   }
@@ -259,7 +257,6 @@ class App {
       const speed = this.settings.reducedMotion ? 0.5 : this.settings.animationSpeed;
       this.world.update(t * speed);
       this.particles.update();
-      this.environment.update(t, speed);
       this.controls.update();
     }
     this.renderer.render(this.scene, this.camera);

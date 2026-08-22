@@ -136,38 +136,6 @@ wonder-meadow/
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 14+ (any version with `crypto.randomUUID`)
-
-### Run
-
-Wonder Meadow is **zero-dependency on the server** — the backend uses only Node's built-in `http`, `fs`, and `crypto` modules.
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/ArfaMunam47/WonderVerse-3D-Learning-Adventure.git
-
-# 2. Navigate into the project
-cd WonderVerse-3D-Learning-Adventure
-
-# 3. Start the server (no npm install needed!)
-npm start
-#   → or directly: node server.js
-```
-
-Open **http://localhost:3000** in your browser. The server serves the frontend from `/public` and the REST API on the same port. Set the `PORT` environment variable to override:
-
-```bash
-PORT=8080 node server.js
-```
-
-### Quick start (no install)
-
-If you'd just like to try the game without Node, open `public/index.html` directly in a browser — the core game, 3D world, sounds, and local-storage saving all work standalone. The REST API (learner profiles & analytics) requires the Node server.
-
 ---
 
 ## 🔌 REST API

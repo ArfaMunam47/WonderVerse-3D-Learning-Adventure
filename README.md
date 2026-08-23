@@ -111,82 +111,91 @@ Children choose a friendly explorer companion to play beside them — from cozy 
 
 ## 🚀 Getting Started
 
-Wonder Meadow is a web app built with modern tooling.
-
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+ (20+ recommended)
-- npm
+- [Node.js](https://nodejs.org/) 14+ (any version with `crypto.randomUUID`)
 
-### Clone & Run Locally
+### Run
+
+Wonder Meadow is **zero-dependency on the server** — the backend uses only Node's built-in `http`, `fs`, and `crypto` modules.
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/ArfaMunam47/WonderVerse-3D-Learning-Adventure.git
-cd wonder-meadow
-npm install
-npm run dev
+
+# 2. Navigate into the project
+cd WonderVerse-3D-Learning-Adventure
+
+# 3. Start the server (no npm install needed!)
+npm start
+#   → or directly: node server.js
 ```
 
-The app should open in your default browser on the local development origin (`http://localhost:3000`).
-
-### Production Build
+Open **http://localhost:3000** in your browser. The server serves the frontend from `/public` and the REST API on the same port. Set the `PORT` environment variable to override:
 
 ```bash
-npm run build
-npm start         # runs the built server on production assets
+PORT=8080 node server.js
 ```
 
-### Available Package Scripts
+### Quick start (no install)
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Runs the full-stack dev server with Vite integration (TSX) |
-| `npm run build` | Builds the frontend + bundles the backend (esbuild) |
-| `npm start` | Runs the compiled production server |
-| `npm run lint` | Type-checks the entire codebase with TypeScript |
-| `npm run clean` | Removes build artifacts |
+If you'd just like to try the game without Node, open `public/index.html` directly in a browser — the core game, 3D world, sounds, and local-storage saving all work standalone. The REST API (learner profiles & analytics) requires the Node server.
 
 ---
 
-## 🔑 Environment Variables
+## 🔌 REST API
 
-Create a `.env` file in the project root with the following variables:
+The server exposes a small JSON API for **child learner profiles**, **progress tracking**, and **learning analytics**.
 
-| Variable | Purpose |
-|---|---|
-| `GEMINI_API_KEY` | Google Gemini API key for the on-demand story/song generation feature |
-| `VITE_SUPABASE_URL` | Supabase project URL (for production auth + sync) |
-| `VITE_SUPABASE_ANON_KEY` | Supabase public anon key |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/profiles` | List all learner profiles |
+| `POST` | `/api/profiles` | Create a profile `{ name, age?, avatar? }` |
+| `GET` | `/api/profiles/:id` | Get one profile |
+| `PUT` | `/api/profiles/:id` | Update a profile |
+| `DELETE` | `/api/profiles/:id` | Delete a profile |
+| `GET` | `/api/progress/:id` | Get progress for a profile |
+| `POST` | `/api/progress/:id` | Merge incremental progress (unions arrays, sums counters) |
+| `GET` | `/api/analytics/:id` | Learning analytics: favorite zone, time per zone, milestones, suggested focus |
 
-> **Versatile by design:** The app works fully **out-of-the-box without any keys configured** — it uses a safe local storage store plus the built-in educational catalog for stories and songs. Add the keys whenever you're ready to go cloud.
+**Progress model** tracks:
+- `unlockedLetters` — letters learned
+- `masteredAnimals` — animals mastered
+- `completedQuizzes` — quizzes completed
+- `stars`, `coins` — reward currencies
+- `achievements` — unlocked badges
+- `totalPlaySeconds` + `zoneTimeSeconds` — engagement analytics
+- `sessions` — rolling session log (capped at 500 entries)
+
+Data is stored as a pretty-printed JSON file at `data/db.json` (auto-created on first run). The `db.*` repository layer is the only code that touches storage, so swapping in SQLite/Postgres later requires no route changes.
 
 ---
 
-## 🗂️ Project Structure
+## 🕹️ How to Play
 
-```
-wonder-meadow/
-├── server.ts                # Express + Vite + Gemini + local storage backend
-├── supabase_schema.sql      # Production Supabase schema with hardened Row Level Security
-├── netlify.toml             # Netlify build, SPA fallback & security headers
-├── src/
-│   ├── App.tsx              # Core app shell, state, modals, zone loading
-│   ├── types.ts             # Shared domain types (zones, progress, a11y, characters)
-│   ├── data/                # Learning content (zones, letters, numbers, animals, stories, songs)
-│   ├── components/
-│   │   ├── 3d/              # Three.js world canvas, joystick, world builder
-│   │   ├── zones/           # Per-zone interactive learning activities
-│   │   ├── accessibility/   # Accessibility & comfort menu
-│   │   ├── auth/            # Parent sign-up / sign-in modal
-│   │   ├── welcome/         # Welcome & character selection screens
-│   │   ├── navigation/      # TopNav, world map, rewards, learn modal
-│   │   ├── parent/          # Parent & caregiver dashboard
-│   │   └── profile/         # Child passport / profile modal
-│   ├── services/            # Supabase auth, profile, progress, preferences
-│   └── utils/
-│       ├── api.ts           # Typed client for backend + Supabase
-│       └── audio.ts         # Zero-asset Web Audio synthesizer & speech
-```
+1. Tap **▶ Play** to enter the 3D world — or **↻ Continue** to resume a saved game.
+2. **Tap or click** anything you see — flowers, animals, stars, balloons, and more. Every tap earns sparkles, sounds, and a friendly voice.
+3. **Drag** gently to look around the world (OrbitControls — right click/zoom to move closer or further).
+4. Use the **🗺️ map button** to travel to a new zone (smooth animated camera flight).
+5. Tap **🧩 Learning Games** in the main menu to play the **Matching** or **Memory** games.
+6. Track badges in **🏆 My Progress** — 9 achievements to unlock!
+7. Tap **⏸️** any time to pause, open settings, or return to the main menu.
+
+---
+
+## 🏆 Achievements
+
+| Badge | How to Earn |
+|-------|-------------|
+| 🏅 First Discovery | Make your first interaction |
+| 🎨 Color Explorer | Tap every color flower in the Flower Garden |
+| ⭐ Shape Star | Tap every shape in Shape Sky |
+| 🐾 Animal Friend | Tap every animal in Animal Friends |
+| 🍎 Orchard Hero | Tap every fruit in the Fruit Orchard |
+| 🔤 Alphabet Champion | Tap every letter in the Alphabet Grove |
+| 🔢 Counting Star | Tap every number in Star Meadow |
+| 🧭 Curious Explorer | Reach 50 total interactions |
+| 🌟 Master Explorer | Reach 200 total interactions |
 
 ---
 

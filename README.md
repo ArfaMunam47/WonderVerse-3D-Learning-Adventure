@@ -19,6 +19,14 @@
 
 ---
 
+## ⚠️ Development Status
+
+> **Important: Wonder Meadow is still in active development.**
+>
+> This is a living, evolving project that is being worked on continuously. Features are being added, refined, and tested with real feedback, and the app is not yet a completed consumer release. Expect ongoing improvements across gameplay, accessibility, performance, and the parent experience.
+
+---
+
 ## ✨ Why Wonder Meadow Exists
 
 Wonder Meadow was born from a simple belief: every child should have access to a learning world that meets them exactly where they are. Instead of flashy, over-stimulating apps built around speed and scores, Wonder Meadow is a **calm, open, curiosity-first environment** where children wander, tap, listen, and discover on their own terms.
@@ -27,13 +35,7 @@ It is designed for the **real learners** it is built for:
 
 - **Toddlers** discovering their first letters, numbers, colors, and sounds
 - **Early elementary children (ages 3–7)** building literacy and numeracy foundations
-- **Children with Down syndrome** and other developmental differences — with oversized targets, gentle pacing, read-aloud narration, reduced-motion options, and visual clarity built into everything, including children from every background
-
-## ⚠️ Development Status
-
-> **Important: Wonder Meadow is still in active development.**
->
-> This is a living, evolving project. Features are being added, refined, and tested with real feedback, and the app is not yet a completed consumer release. Expect ongoing improvements across gameplay, accessibility, performance, and the parent experience.
+- **Children with Down syndrome** and other developmental differences — with oversized targets, gentle pacing, read-aloud narration, reduced-motion options, and visual clarity built into everything
 
 ---
 
@@ -87,7 +89,7 @@ Children choose a friendly explorer companion to play beside them — from cozy 
   - A curriculum map explaining what each zone teaches
   - Learning-skill breakdowns (letters, counting, colors, shapes, nature)
   - Kid-safe profile & avatar setup
-  - Slow, step-by-step accessibility blending toggles
+  - Accessibility toggles
   - A safe one-tap "Reset Progress"
 
 ---
@@ -97,7 +99,7 @@ Children choose a friendly explorer companion to play beside them — from cozy 
 | Layer | Technology |
 |---|---|
 | Frontend | **React 19**, **TypeScript**, **Vite 6**, **Tailwind CSS 4** |
-| 3D World | **Three.js** with a fully built meadow scene, interactive targets, animation system & procedural cartoonyized 3D characters |
+| 3D World | **Three.js** with a fully built meadow scene, interactive targets, animation system & procedural 3D characters |
 | Audio | **Web Audio API** synthesizer (zero external audio assets) + **Speech Synthesis** narration |
 | Animation | **Motion (Framer Motion)** for smooth UI transitions |
 | Celebrations | **canvas-confetti** |
@@ -111,91 +113,80 @@ Children choose a friendly explorer companion to play beside them — from cozy 
 
 ## 🚀 Getting Started
 
+Wonder Meadow is a web app built with modern tooling.
+
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 14+ (any version with `crypto.randomUUID`)
+- [Node.js](https://nodejs.org/) 18+ (20+ recommended)
+- npm
 
-### Run
-
-Wonder Meadow is **zero-dependency on the server** — the backend uses only Node's built-in `http`, `fs`, and `crypto` modules.
+### Clone & Run
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/ArfaMunam47/WonderVerse-3D-Learning-Adventure.git
-
-# 2. Navigate into the project
-cd WonderVerse-3D-Learning-Adventure
-
-# 3. Start the server (no npm install needed!)
-npm start
-#   → or directly: node server.js
+cd wonder-meadow
+npm install
+npm run dev
 ```
 
-Open **http://localhost:3000** in your browser. The server serves the frontend from `/public` and the REST API on the same port. Set the `PORT` environment variable to override:
+### Production Build
 
 ```bash
-PORT=8080 node server.js
+npm run build
+npm start
 ```
 
-### Quick start (no install)
+### Available Package Scripts
 
-If you'd just like to try the game without Node, open `public/index.html` directly in a browser — the core game, 3D world, sounds, and local-storage saving all work standalone. The REST API (learner profiles & analytics) requires the Node server.
-
----
-
-## 🔌 REST API
-
-The server exposes a small JSON API for **child learner profiles**, **progress tracking**, and **learning analytics**.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/profiles` | List all learner profiles |
-| `POST` | `/api/profiles` | Create a profile `{ name, age?, avatar? }` |
-| `GET` | `/api/profiles/:id` | Get one profile |
-| `PUT` | `/api/profiles/:id` | Update a profile |
-| `DELETE` | `/api/profiles/:id` | Delete a profile |
-| `GET` | `/api/progress/:id` | Get progress for a profile |
-| `POST` | `/api/progress/:id` | Merge incremental progress (unions arrays, sums counters) |
-| `GET` | `/api/analytics/:id` | Learning analytics: favorite zone, time per zone, milestones, suggested focus |
-
-**Progress model** tracks:
-- `unlockedLetters` — letters learned
-- `masteredAnimals` — animals mastered
-- `completedQuizzes` — quizzes completed
-- `stars`, `coins` — reward currencies
-- `achievements` — unlocked badges
-- `totalPlaySeconds` + `zoneTimeSeconds` — engagement analytics
-- `sessions` — rolling session log (capped at 500 entries)
-
-Data is stored as a pretty-printed JSON file at `data/db.json` (auto-created on first run). The `db.*` repository layer is the only code that touches storage, so swapping in SQLite/Postgres later requires no route changes.
+| Command | Description |
+|---|---|
+| `npm run dev` | Runs the full-stack dev server with Vite integration (TSX) |
+| `npm run build` | Builds the frontend + bundles the backend (esbuild) |
+| `npm start` | Runs the compiled production server |
+| `npm run lint` | Type-checks the entire codebase with TypeScript |
+| `npm run clean` | Removes build artifacts |
 
 ---
 
-## 🕹️ How to Play
+## 🔑 Environment Variables
 
-1. Tap **▶ Play** to enter the 3D world — or **↻ Continue** to resume a saved game.
-2. **Tap or click** anything you see — flowers, animals, stars, balloons, and more. Every tap earns sparkles, sounds, and a friendly voice.
-3. **Drag** gently to look around the world (OrbitControls — right click/zoom to move closer or further).
-4. Use the **🗺️ map button** to travel to a new zone (smooth animated camera flight).
-5. Tap **🧩 Learning Games** in the main menu to play the **Matching** or **Memory** games.
-6. Track badges in **🏆 My Progress** — 9 achievements to unlock!
-7. Tap **⏸️** any time to pause, open settings, or return to the main menu.
+Create a `.env` file in the project root with the following variables:
+
+| Variable | Purpose |
+|---|---|
+| `GEMINI_API_KEY` | Google Gemini API key for the on-demand story/song generation feature |
+| `VITE_SUPABASE_URL` | Supabase project URL (for production auth + sync) |
+| `VITE_SUPABASE_ANON_KEY` | Supabase public anon key |
+
+> **Versatile by design:** The app works fully **out-of-the-box without any keys configured** — it uses a safe local storage store plus the built-in educational catalog for stories and songs. Add the keys whenever you're ready to go cloud.
 
 ---
 
-## 🏆 Achievements
+## 🗂️ Project Structure
 
-| Badge | How to Earn |
-|-------|-------------|
-| 🏅 First Discovery | Make your first interaction |
-| 🎨 Color Explorer | Tap every color flower in the Flower Garden |
-| ⭐ Shape Star | Tap every shape in Shape Sky |
-| 🐾 Animal Friend | Tap every animal in Animal Friends |
-| 🍎 Orchard Hero | Tap every fruit in the Fruit Orchard |
-| 🔤 Alphabet Champion | Tap every letter in the Alphabet Grove |
-| 🔢 Counting Star | Tap every number in Star Meadow |
-| 🧭 Curious Explorer | Reach 50 total interactions |
-| 🌟 Master Explorer | Reach 200 total interactions |
+```
+wonder-meadow/
+├── server.ts                # Express + Vite + Gemini + local storage backend
+├── supabase_schema.sql      # Production Supabase schema with hardened Row Level Security
+├── netlify.toml             # Netlify build, SPA fallback & security headers
+├── src/
+│   ├── App.tsx              # Core app shell, state, modals, zone loading
+│   ├── types.ts             # Shared domain types (zones, progress, a11y, characters)
+│   ├── data/                # Learning content (zones, letters, numbers, animals, stories, songs)
+│   ├── components/
+│   │   ├── 3d/              # Three.js world canvas, joystick, world builder
+│   │   ├── zones/           # Per-zone interactive learning activities
+│   │   ├── accessibility/   # Accessibility & comfort menu
+│   │   ├── auth/            # Parent sign-up / sign-in modal
+│   │   ├── welcome/         # Welcome & character selection screens
+│   │   ├── navigation/      # TopNav, world map, rewards, learn modal
+│   │   ├── parent/          # Parent & caregiver dashboard
+│   │   └── profile/         # Child passport / profile modal
+│   ├── services/            # Supabase auth, profile, progress, preferences
+│   └── utils/
+│       ├── api.ts           # Typed client for backend + Supabase
+│       └── audio.ts         # Zero-asset Web Audio synthesizer & speech
+```
 
 ---
 
@@ -208,7 +199,7 @@ The app ships with a carefully curated learning catalog, **hand-tuned for gentle
 - **20 fruits** with colors and shapes in bright, familiar hues
 - **22 friendly animals** with sounds and fun facts across farm, forest, jungle & water
 - **6 classic nursery songs, poems, and rhythm games**
-- **4+ multi-scene read-aloud stories** (kindness, courage, self-confidence, starlight) 
+- **4+ multi-scene read-aloud stories** (kindness, courage, self-confidence, starlight)
 - **8 feelings/emotions** with kindness coaching phrases & gentle breathing tips
 - **7 starter explorers plus a secret future companion**, each with an original 3D cartoon body
 
@@ -220,7 +211,7 @@ Plus the **AI Story / Music Generation endpoints** allow new, on-theme stories a
 
 - **Zero ads, zero in-app purchases, zero external trackers**
 - **Adult-gated parent dashboard** (simple math challenge required)
-- **Hardened backend** — Supabase Row Level Security, curated / hardened permissions, privilege-escalation protection trigger
+- **Hardened backend** — Supabase Row Level Security, curated permissions, privilege-escalation protection trigger
 - **Strict Content-Security-Policy** headers on deployment for attack surface reduction
 - **Age-appropriate, positive, intentionally kind** stories and messages — emphasizing kindness, gentle exploration, and self-worth in every experience
 

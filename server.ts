@@ -11,7 +11,67 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+// Enforce request body size limits to prevent Denial of Service (DoS) payload attacks
+app.use(express.json({ limit: '100kb' }));
+
+// ----------------------------------------------------
+// HTTP SECURITY HEADERS MIDDLEWARE (OWASP Compliant)
+// ----------------------------------------------------
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+  );
+  next();
+});
+
+// ----------------------------------------------------
+// RATE LIMITING ENGINE (In-Memory Sliding Window)
+// ----------------------------------------------------
+interface RateLimitRecord {
+  timestamps: number[];
+}
+const rateLimitStore = new Map<string, RateLimitRecord>();
+
+function rateLimiter(windowMs: number, maxRequests: number, actionName: string) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const clientIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const key = `${actionName}:${clientIp}`;
+    const now = Date.now();
+
+    const record = rateLimitStore.get(key) || { timestamps: [] };
+    // Prune expired timestamps
+    record.timestamps = record.timestamps.filter(ts => now - ts < windowMs);
+
+    if (record.timestamps.length >= maxRequests) {
+      return res.status(429).json({
+        success: false,
+        error: 'Too many requests. Please wait a moment and try again.'
+      });
+    }
+
+    record.timestamps.push(now);
+    rateLimitStore.set(key, record);
+    next();
+  };
+}
+
+// Clean up stale rate limiter records every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of rateLimitStore.entries()) {
+    record.timestamps = record.timestamps.filter(ts => now - ts < 600000);
+    if (record.timestamps.length === 0) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
 
 // ----------------------------------------------------
 // DATABASE & PERSISTENCE ENGINE (Atomic File Store)
@@ -22,6 +82,7 @@ interface UserRecord {
   id: string;
   email: string;
   passwordHash: string;
+  salt?: string;
   childName: string;
   avatar: string;
   gender: 'boy' | 'girl';
@@ -34,6 +95,8 @@ interface ProfileRecord {
   childName: string;
   avatar: string;
   gender: 'boy' | 'girl';
+  characterId?: string;
+  role?: 'parent' | 'child' | 'admin';
   bio?: string;
   favoriteZone?: string | null;
   createdAt: string;
@@ -79,7 +142,6 @@ interface DatabaseSchema {
   sessions: SessionRecord[];
 }
 
-// Initial DB template
 const defaultDb: DatabaseSchema = {
   users: [],
   profiles: [],
@@ -95,7 +157,7 @@ function readDb(): DatabaseSchema {
       return JSON.parse(data);
     }
   } catch (err) {
-    console.error('Error reading database file, using default:', err);
+    console.error('Database read notice:', err);
   }
   return { ...defaultDb };
 }
@@ -104,19 +166,50 @@ function writeDb(db: DatabaseSchema) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
   } catch (err) {
-    console.error('Error writing database file:', err);
+    console.error('Database write notice:', err);
   }
 }
 
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password + '_wonder_salt_meadow').digest('hex');
+// ----------------------------------------------------
+// CRYPTOGRAPHIC UTILITIES (Hardened scrypt password hashing)
+// ----------------------------------------------------
+function hashPassword(password: string, salt: string): string {
+  return crypto.scryptSync(password, salt, 64).toString('hex');
+}
+
+function generateSalt(): string {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function verifyPassword(password: string, user: UserRecord): boolean {
+  if (user.salt) {
+    const computed = hashPassword(password, user.salt);
+    return crypto.timingSafeEqual(Buffer.from(computed, 'hex'), Buffer.from(user.passwordHash, 'hex'));
+  }
+  // Legacy fallback migration
+  const legacyHash = crypto.createHash('sha256').update(password + '_wonder_salt_meadow').digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(legacyHash), Buffer.from(user.passwordHash));
 }
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// Middleware: Authenticate Session Token
+// Input sanitizer for strings (removes control chars and script tags)
+function sanitizeText(input: unknown, maxLen = 100): string {
+  if (typeof input !== 'string') return '';
+  return input
+    .replace(/[<>]/g, '')
+    .replace(/[\x00-\x1F\x7F]/g, '')
+    .trim()
+    .slice(0, maxLen);
+}
+
+const VALID_ZONES = new Set(['alphabet', 'numbers', 'fruits', 'animals', 'creative', 'music', 'stories', 'stars']);
+
+// ----------------------------------------------------
+// AUTHENTICATION & AUTHORIZATION MIDDLEWARE
+// ----------------------------------------------------
 function authenticateUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -128,12 +221,20 @@ function authenticateUser(req: express.Request, res: express.Response, next: exp
   const session = db.sessions.find(s => s.token === token);
 
   if (!session) {
-    return res.status(401).json({ success: false, error: 'Invalid or expired session' });
+    return res.status(401).json({ success: false, error: 'Invalid session' });
+  }
+
+  // Enforce session expiration check
+  if (new Date(session.expiresAt).getTime() < Date.now()) {
+    // Purge expired session
+    db.sessions = db.sessions.filter(s => s.token !== token);
+    writeDb(db);
+    return res.status(401).json({ success: false, error: 'Session expired. Please sign in again.' });
   }
 
   const user = db.users.find(u => u.id === session.userId);
   if (!user) {
-    return res.status(401).json({ success: false, error: 'User not found' });
+    return res.status(401).json({ success: false, error: 'User account not found' });
   }
 
   (req as any).user = user;
@@ -142,7 +243,7 @@ function authenticateUser(req: express.Request, res: express.Response, next: exp
 }
 
 // ----------------------------------------------------
-// GEMINI AI INTEGRATION
+// GEMINI AI CLIENT INITIALIZATION
 // ----------------------------------------------------
 let aiClient: GoogleGenAI | null = null;
 function getGenAI(): GoogleGenAI | null {
@@ -172,33 +273,45 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// 2. Auth: Register / Sign Up
-app.post('/api/auth/signup', (req, res) => {
+// 2. Auth: Register / Sign Up (Rate limited: 10 requests / 15 minutes)
+app.post('/api/auth/signup', rateLimiter(15 * 60 * 1000, 10, 'auth_signup'), (req, res) => {
   try {
-    const { email, password, childName = 'Explorer', avatar = '👧', gender = 'girl' } = req.body;
+    const { email, password, childName, avatar, gender } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password are required' });
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail) || cleanEmail.length > 254) {
+      return res.status(400).json({ success: false, error: 'Please enter a valid email address' });
+    }
+
+    if (typeof password !== 'string' || password.length < 8 || password.length > 128) {
+      return res.status(400).json({ success: false, error: 'Password must be between 8 and 128 characters' });
+    }
+
     const db = readDb();
 
     if (db.users.some(u => u.email === cleanEmail)) {
       return res.status(409).json({ success: false, error: 'An account with this email already exists' });
     }
 
-    const userId = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    const userId = 'usr_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
     const now = new Date().toISOString();
     const validatedGender: 'boy' | 'girl' = gender === 'boy' ? 'boy' : 'girl';
-    const chosenAvatar = avatar || (validatedGender === 'boy' ? '👦' : '👧');
+    const sanitizedChildName = sanitizeText(childName, 50) || (validatedGender === 'boy' ? 'Boy Explorer' : 'Girl Explorer');
+    const sanitizedAvatar = sanitizeText(avatar, 20) || (validatedGender === 'boy' ? '👦' : '👧');
 
+    const salt = generateSalt();
     const newUser: UserRecord = {
       id: userId,
       email: cleanEmail,
-      passwordHash: hashPassword(password),
-      childName: String(childName).trim() || (validatedGender === 'boy' ? 'Boy Explorer' : 'Girl Explorer'),
-      avatar: chosenAvatar,
+      salt,
+      passwordHash: hashPassword(password, salt),
+      childName: sanitizedChildName,
+      avatar: sanitizedAvatar,
       gender: validatedGender,
       createdAt: now,
       updatedAt: now
@@ -206,9 +319,11 @@ app.post('/api/auth/signup', (req, res) => {
 
     const newProfile: ProfileRecord = {
       userId,
-      childName: newUser.childName,
-      avatar: newUser.avatar,
+      childName: sanitizedChildName,
+      avatar: sanitizedAvatar,
       gender: validatedGender,
+      characterId: 'curious_explorer',
+      role: 'parent',
       favoriteZone: 'alphabet',
       createdAt: now,
       updatedAt: now
@@ -279,12 +394,12 @@ app.post('/api/auth/signup', (req, res) => {
     });
   } catch (err: any) {
     console.error('Signup error:', err);
-    return res.status(500).json({ success: false, error: 'Could not create account' });
+    return res.status(500).json({ success: false, error: 'Could not create account safely. Please try again.' });
   }
 });
 
-// 3. Auth: Login
-app.post('/api/auth/login', (req, res) => {
+// 3. Auth: Login (Rate limited: 10 requests / 15 minutes)
+app.post('/api/auth/login', rateLimiter(15 * 60 * 1000, 10, 'auth_login'), (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -296,8 +411,14 @@ app.post('/api/auth/login', (req, res) => {
     const db = readDb();
     const user = db.users.find(u => u.email === cleanEmail);
 
-    if (!user || user.passwordHash !== hashPassword(password)) {
+    if (!user || typeof password !== 'string' || !verifyPassword(password, user)) {
       return res.status(401).json({ success: false, error: 'Incorrect email or password' });
+    }
+
+    // Upgrade legacy password hash to salted scrypt if needed
+    if (!user.salt) {
+      user.salt = generateSalt();
+      user.passwordHash = hashPassword(password, user.salt);
     }
 
     const token = generateToken();
@@ -318,13 +439,13 @@ app.post('/api/auth/login', (req, res) => {
         childName: user.childName,
         avatar: user.avatar,
         gender: user.gender || 'girl',
-        favoriteZone: null,
+        characterId: 'curious_explorer',
+        role: 'parent',
+        favoriteZone: 'alphabet',
         createdAt: now,
         updatedAt: now
       };
       db.profiles.push(profile);
-    } else if (!profile.gender) {
-      profile.gender = user.gender || 'girl';
     }
 
     let progress = db.progress.find(p => p.userId === user.id);
@@ -336,7 +457,7 @@ app.post('/api/auth/login', (req, res) => {
         discoveredItems: [],
         stickersUnlocked: [],
         zoneVisits: { alphabet: 0, numbers: 0, fruits: 0, animals: 0, creative: 0, music: 0, stories: 0, stars: 0 },
-        favoriteZone: null,
+        favoriteZone: 'alphabet',
         lastPlayed: now
       };
       db.progress.push(progress);
@@ -403,6 +524,8 @@ app.get('/api/auth/me', authenticateUser, (req, res) => {
     childName: user.childName,
     avatar: user.avatar,
     gender: user.gender || 'girl',
+    characterId: 'curious_explorer',
+    role: 'parent',
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
@@ -414,7 +537,7 @@ app.get('/api/auth/me', authenticateUser, (req, res) => {
     discoveredItems: [],
     stickersUnlocked: [],
     zoneVisits: { alphabet: 0, numbers: 0, fruits: 0, animals: 0, creative: 0, music: 0, stories: 0, stars: 0 },
-    favoriteZone: null,
+    favoriteZone: 'alphabet',
     lastPlayed: new Date().toISOString()
   };
 
@@ -446,20 +569,25 @@ app.get('/api/auth/me', authenticateUser, (req, res) => {
   });
 });
 
-// 6. User Profile Update
+// 6. User Profile Update (Strictly authorized to session owner)
 app.put('/api/user/profile', authenticateUser, (req, res) => {
   try {
     const user = (req as any).user as UserRecord;
-    const { childName, avatar, bio, favoriteZone, gender } = req.body;
+    const { childName, avatar, bio, favoriteZone, gender, characterId } = req.body;
     const db = readDb();
 
     const validatedGender: ('boy' | 'girl') | undefined = gender === 'boy' ? 'boy' : gender === 'girl' ? 'girl' : undefined;
+    const sanitizedName = childName !== undefined ? sanitizeText(childName, 50) : undefined;
+    const sanitizedAvatar = avatar !== undefined ? sanitizeText(avatar, 20) : undefined;
+    const sanitizedBio = bio !== undefined ? sanitizeText(bio, 300) : undefined;
+    const sanitizedCharId = characterId !== undefined ? sanitizeText(characterId, 50) : undefined;
+    const validatedZone = favoriteZone && VALID_ZONES.has(String(favoriteZone)) ? String(favoriteZone) : undefined;
 
     // Update user record
     const userIdx = db.users.findIndex(u => u.id === user.id);
     if (userIdx >= 0) {
-      if (childName) db.users[userIdx].childName = String(childName).trim();
-      if (avatar) db.users[userIdx].avatar = avatar;
+      if (sanitizedName) db.users[userIdx].childName = sanitizedName;
+      if (sanitizedAvatar) db.users[userIdx].avatar = sanitizedAvatar;
       if (validatedGender) db.users[userIdx].gender = validatedGender;
       db.users[userIdx].updatedAt = new Date().toISOString();
     }
@@ -469,21 +597,24 @@ app.put('/api/user/profile', authenticateUser, (req, res) => {
     if (!profile) {
       profile = {
         userId: user.id,
-        childName: childName || user.childName,
-        avatar: avatar || user.avatar,
+        childName: sanitizedName || user.childName,
+        avatar: sanitizedAvatar || user.avatar,
         gender: validatedGender || user.gender || 'girl',
-        bio: bio || '',
-        favoriteZone: favoriteZone || null,
+        characterId: sanitizedCharId || 'curious_explorer',
+        role: 'parent',
+        bio: sanitizedBio || '',
+        favoriteZone: validatedZone || 'alphabet',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
       db.profiles.push(profile);
     } else {
-      if (childName) profile.childName = String(childName).trim();
-      if (avatar) profile.avatar = avatar;
+      if (sanitizedName) profile.childName = sanitizedName;
+      if (sanitizedAvatar) profile.avatar = sanitizedAvatar;
       if (validatedGender) profile.gender = validatedGender;
-      if (bio !== undefined) profile.bio = bio;
-      if (favoriteZone !== undefined) profile.favoriteZone = favoriteZone;
+      if (sanitizedCharId) profile.characterId = sanitizedCharId;
+      if (sanitizedBio !== undefined) profile.bio = sanitizedBio;
+      if (validatedZone !== undefined) profile.favoriteZone = validatedZone;
       profile.updatedAt = new Date().toISOString();
     }
 
@@ -506,7 +637,7 @@ app.put('/api/user/profile', authenticateUser, (req, res) => {
   }
 });
 
-// 7. User Progress Sync / Save
+// 7. User Progress Sync / Save (Validation of boundaries)
 app.put('/api/user/progress', authenticateUser, (req, res) => {
   try {
     const user = (req as any).user as UserRecord;
@@ -516,25 +647,34 @@ app.put('/api/user/progress', authenticateUser, (req, res) => {
     let progress = db.progress.find(p => p.userId === user.id);
     const now = new Date().toISOString();
 
+    // Validate stars boundary: 0 to 100,000 max
+    const safeStars = typeof stars === 'number' && Number.isFinite(stars) && stars >= 0 && stars <= 100000 ? Math.floor(stars) : undefined;
+    const safeActivities = Array.isArray(completedActivities) ? completedActivities.slice(0, 200).map(s => sanitizeText(s, 60)).filter(Boolean) : undefined;
+    const safeDiscovered = Array.isArray(discoveredItems) ? discoveredItems.slice(0, 200).map(s => sanitizeText(s, 60)).filter(Boolean) : undefined;
+    const safeStickers = Array.isArray(stickersUnlocked) ? stickersUnlocked.slice(0, 100).map(s => sanitizeText(s, 60)).filter(Boolean) : undefined;
+    const validatedZone = favoriteZone && VALID_ZONES.has(String(favoriteZone)) ? String(favoriteZone) : undefined;
+
     if (!progress) {
       progress = {
         userId: user.id,
-        stars: typeof stars === 'number' ? stars : 5,
-        completedActivities: completedActivities || [],
-        discoveredItems: discoveredItems || [],
-        stickersUnlocked: stickersUnlocked || [],
-        zoneVisits: zoneVisits || {},
-        favoriteZone: favoriteZone || null,
+        stars: safeStars !== undefined ? safeStars : 5,
+        completedActivities: safeActivities || [],
+        discoveredItems: safeDiscovered || [],
+        stickersUnlocked: safeStickers || [],
+        zoneVisits: typeof zoneVisits === 'object' && zoneVisits !== null ? zoneVisits : {},
+        favoriteZone: validatedZone || 'alphabet',
         lastPlayed: now
       };
       db.progress.push(progress);
     } else {
-      if (typeof stars === 'number') progress.stars = stars;
-      if (Array.isArray(completedActivities)) progress.completedActivities = completedActivities;
-      if (Array.isArray(discoveredItems)) progress.discoveredItems = discoveredItems;
-      if (Array.isArray(stickersUnlocked)) progress.stickersUnlocked = stickersUnlocked;
-      if (zoneVisits) progress.zoneVisits = { ...progress.zoneVisits, ...zoneVisits };
-      if (favoriteZone !== undefined) progress.favoriteZone = favoriteZone;
+      if (safeStars !== undefined) progress.stars = safeStars;
+      if (safeActivities !== undefined) progress.completedActivities = safeActivities;
+      if (safeDiscovered !== undefined) progress.discoveredItems = safeDiscovered;
+      if (safeStickers !== undefined) progress.stickersUnlocked = safeStickers;
+      if (typeof zoneVisits === 'object' && zoneVisits !== null) {
+        progress.zoneVisits = { ...progress.zoneVisits, ...zoneVisits };
+      }
+      if (validatedZone !== undefined) progress.favoriteZone = validatedZone;
       progress.lastPlayed = now;
     }
 
@@ -554,34 +694,34 @@ app.put('/api/user/progress', authenticateUser, (req, res) => {
 app.put('/api/user/preferences', authenticateUser, (req, res) => {
   try {
     const user = (req as any).user as UserRecord;
-    const preferencesData = req.body;
+    const body = req.body || {};
     const db = readDb();
 
     let preferences = db.preferences.find(p => p.userId === user.id);
+    const sanitizedPrefs: PreferencesRecord = {
+      userId: user.id,
+      soundEnabled: typeof body.soundEnabled === 'boolean' ? body.soundEnabled : true,
+      musicVolume: typeof body.musicVolume === 'number' ? Math.max(0, Math.min(1, body.musicVolume)) : 0.7,
+      sfxVolume: typeof body.sfxVolume === 'number' ? Math.max(0, Math.min(1, body.sfxVolume)) : 0.8,
+      narrationEnabled: typeof body.narrationEnabled === 'boolean' ? body.narrationEnabled : true,
+      reducedMotion: typeof body.reducedMotion === 'boolean' ? body.reducedMotion : false,
+      highContrast: typeof body.highContrast === 'boolean' ? body.highContrast : false,
+      dyslexicFont: typeof body.dyslexicFont === 'boolean' ? body.dyslexicFont : false,
+      largeText: typeof body.largeText === 'boolean' ? body.largeText : false,
+      largeHitTargets: typeof body.largeHitTargets === 'boolean' ? body.largeHitTargets : false
+    };
+
     if (!preferences) {
-      preferences = {
-        userId: user.id,
-        soundEnabled: true,
-        musicVolume: 0.7,
-        sfxVolume: 0.8,
-        narrationEnabled: true,
-        reducedMotion: false,
-        highContrast: false,
-        dyslexicFont: false,
-        largeText: false,
-        largeHitTargets: false,
-        ...preferencesData
-      };
-      db.preferences.push(preferences);
+      db.preferences.push(sanitizedPrefs);
     } else {
-      Object.assign(preferences, preferencesData);
+      Object.assign(preferences, sanitizedPrefs);
     }
 
     writeDb(db);
 
     return res.json({
       success: true,
-      preferences
+      preferences: sanitizedPrefs
     });
   } catch (err: any) {
     console.error('Preferences save error:', err);
@@ -589,29 +729,35 @@ app.put('/api/user/preferences', authenticateUser, (req, res) => {
   }
 });
 
-// 9. API: Generate Multi-Scene Educational Story with Gemini
-app.post('/api/story/generate', async (req, res) => {
+// 9. API: Generate Multi-Scene Educational Story with Gemini (Rate limited: 15 requests / min)
+app.post('/api/story/generate', rateLimiter(60 * 1000, 15, 'gemini_story'), async (req, res) => {
   try {
-    const { topic = 'kindness and sharing', characterName = 'Pippin the Bunny', ageGroup = '3-6' } = req.body;
+    const rawTopic = req.body.topic || 'kindness and sharing';
+    const rawCharacter = req.body.characterName || 'Pippin the Bunny';
+    const rawAgeGroup = req.body.ageGroup || '3-6';
+
+    const topic = sanitizeText(rawTopic, 80);
+    const characterName = sanitizeText(rawCharacter, 40);
+    const ageGroup = sanitizeText(rawAgeGroup, 10);
+
     const ai = getGenAI();
 
     if (!ai) {
-      // Return structured fallback story if no API key is set
       return res.json({
         success: true,
         source: 'local_educational_catalog',
         story: {
           id: `story-${Date.now()}`,
-          title: `The Little Adventure of ${characterName}`,
+          title: `The Little Adventure of ${characterName || 'Pippin'}`,
           moral: 'Being curious and gentle brings joy to friends.',
           learningObjective: 'Empathy, friendship, and positive problem-solving',
-          characters: [characterName, 'Oliver the Owl', 'Daphne Duck'],
+          characters: [characterName || 'Pippin', 'Oliver the Owl', 'Daphne Duck'],
           scenes: [
             {
               sceneNumber: 1,
               title: 'A Sunny Morning',
               illustration: '🌸🐰',
-              narration: `${characterName} hopped into Wonder Meadow as the warm morning sun bathed the clover fields in gold.`,
+              narration: `${characterName || 'Pippin'} hopped into Wonder Meadow as the warm morning sun bathed the clover fields in gold.`,
               caption: 'Morning in Wonder Meadow is full of gentle breezes and singing birds.',
               environmentTag: 'meadow-morning',
               interactionPrompt: 'Tap the clover flowers to help them bloom!'
@@ -620,7 +766,7 @@ app.post('/api/story/generate', async (req, res) => {
               sceneNumber: 2,
               title: 'The Hidden Path',
               illustration: '🌲✨',
-              narration: `Near the Whispering Oak, ${characterName} spotted a tiny stone pathway with glittering colorful pebbles.`,
+              narration: `Near the Whispering Oak, ${characterName || 'Pippin'} spotted a tiny stone pathway with glittering colorful pebbles.`,
               caption: 'Each stone had a friendly number carved on it.',
               environmentTag: 'forest-path',
               interactionPrompt: 'Count 3 stepping stones along the trail.'
@@ -638,7 +784,7 @@ app.post('/api/story/generate', async (req, res) => {
               sceneNumber: 4,
               title: 'A Helpful Idea',
               illustration: '🌿🤝',
-              narration: `${characterName} gently guided Daphne with a leafy stick to help retrieve the golden water lily.`,
+              narration: `${characterName || 'Pippin'} gently guided Daphne with a leafy stick to help retrieve the golden water lily.`,
               caption: 'Working together made solving the puzzle easy and fun.',
               environmentTag: 'sparkling-pond',
               interactionPrompt: 'Tap together to celebrate teamwork!'
@@ -712,19 +858,25 @@ The story must have 5 to 7 distinct scenes with positive emotions, very simple v
       }
     });
   } catch (error: unknown) {
-    console.error('Gemini Story Generation Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Story generation error';
+    console.error('Gemini Story Generation Error (Safe server log):', error);
     return res.status(500).json({
       success: false,
-      error: errorMessage
+      error: 'Unable to create story right now. Please try again in a moment.'
     });
   }
 });
 
-// 10. API: Generate Educational Song or Poem with Gemini
-app.post('/api/music/generate', async (req, res) => {
+// 10. API: Generate Educational Song or Poem with Gemini (Rate limited: 15 requests / min)
+app.post('/api/music/generate', rateLimiter(60 * 1000, 15, 'gemini_music'), async (req, res) => {
   try {
-    const { theme = 'nature and colors', type = 'nursery_song', instrument = 'xylophone' } = req.body;
+    const rawTheme = req.body.theme || 'nature and colors';
+    const rawType = req.body.type || 'nursery_song';
+    const rawInstrument = req.body.instrument || 'xylophone';
+
+    const theme = sanitizeText(rawTheme, 80);
+    const type = sanitizeText(rawType, 30);
+    const instrument = sanitizeText(rawInstrument, 30);
+
     const ai = getGenAI();
 
     if (!ai) {
@@ -799,11 +951,10 @@ Use simple rhyming words, short lines, concrete ideas, and a cheerful 0-7 note m
       }
     });
   } catch (error: unknown) {
-    console.error('Gemini Music Generation Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Music generation error';
+    console.error('Gemini Music Generation Error (Safe server log):', error);
     return res.status(500).json({
       success: false,
-      error: errorMessage
+      error: 'Unable to create music right now. Please try again in a moment.'
     });
   }
 });
@@ -830,4 +981,5 @@ async function startServer() {
 }
 
 startServer();
+
 

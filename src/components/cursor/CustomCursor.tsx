@@ -1,113 +1,173 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+
+/**
+ * Wonder Meadow - Ultra-Lightweight & Performant Child-Friendly Custom Pointer
+ *
+ * Architecture & Performance Rules:
+ * 1. Zero React state updates on mousemove (completely eliminates re-renders and lag).
+ * 2. Direct transform manipulation via requestAnimationFrame with GPU hardware acceleration (`translate3d`).
+ * 3. Exact synchronization with pointer position (no artificial latency or trailing lag).
+ * 4. Touch device detection: completely removes custom cursor element on touch devices (`pointer: coarse`).
+ * 5. Full support for `prefers-reduced-motion` and system cursor fallbacks.
+ * 6. Interactive state detection (buttons, links, zone cards, text inputs, disabled elements).
+ */
 
 export const CustomCursor: React.FC = () => {
-  const [position, setPosition] = useState<{ x: number; y: number }>({ x: -100, y: -100 });
-  const [isHoveringInteractive, setIsHoveringInteractive] = useState(false);
-  const [isHoveringZone, setIsHoveringZone] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
-  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const cursorRef = useRef<HTMLDivElement>(null);
+  const cursorDotRef = useRef<HTMLDivElement>(null);
+  const cursorAuraRef = useRef<HTMLDivElement>(null);
+  const isTouchRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // Check if device is touch primary
-    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
-      setIsTouchDevice(true);
-      return;
+    // 1. Detect if primary pointer is coarse (Touch screens: iOS / Android / Touch tablets)
+    if (typeof window !== 'undefined') {
+      const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+      if (isTouch) {
+        isTouchRef.current = true;
+        return; // Do NOT attach mouse listeners on touch devices
+      }
     }
 
-    const handleMouseMove = (e: MouseEvent) => {
-      setPosition({ x: e.clientX, y: e.clientY });
+    const dotEl = cursorDotRef.current;
+    const auraEl = cursorAuraRef.current;
+    if (!dotEl || !auraEl) return;
 
-      // Check target element
-      const target = e.target as HTMLElement | null;
+    let targetX = -100;
+    let targetY = -100;
+    let isVisible = false;
+    let isClicking = false;
+    let isHovering = false;
+    let isZoneHover = false;
+    let isTextInput = false;
+    let isHidden = false;
+    let animationFrameId: number;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Check target element and apply CSS state classes directly without React re-rendering
+    const updateInteractiveState = (target: HTMLElement | null) => {
       if (!target) return;
 
-      const interactive = target.closest('button, a, input, canvas, [role="button"], .interactive-target, select');
-      setIsHoveringInteractive(!!interactive);
+      const inputEl = target.closest('input, textarea, [contenteditable="true"]');
+      isTextInput = !!inputEl;
 
-      const zoneCard = target.closest('.zone-card, [data-zone-target], .landmark-3d');
-      setIsHoveringZone(!!zoneCard);
+      const disabledEl = target.closest('[disabled], [aria-disabled="true"], .opacity-50');
+      const interactiveEl = target.closest('button, a, select, [role="button"], .interactive-target');
+      const zoneEl = target.closest('.zone-card, [data-zone-target], .landmark-3d');
+
+      isHovering = !!(interactiveEl && !disabledEl);
+      isZoneHover = !!zoneEl;
+
+      // Update classes directly on DOM elements
+      if (isTextInput || disabledEl) {
+        isHidden = isTextInput; // Hide custom follower over text inputs so the native I-beam is crisp
+        auraEl.style.opacity = isTextInput ? '0' : '0.15';
+        dotEl.style.opacity = isTextInput ? '0' : '0.4';
+      } else {
+        isHidden = false;
+        auraEl.style.opacity = isVisible ? '1' : '0';
+        dotEl.style.opacity = isVisible ? '1' : '0';
+
+        if (isZoneHover) {
+          auraEl.className = 'absolute rounded-full pointer-events-none transition-all duration-150 ease-out will-change-transform w-9 h-9 -top-4.5 -left-4.5 bg-amber-400/35 border border-amber-300/60 shadow-sm scale-110';
+          dotEl.className = 'absolute rounded-full pointer-events-none transition-transform duration-100 ease-out will-change-transform w-4 h-4 -top-2 -left-2 bg-gradient-to-tr from-amber-400 to-yellow-300 border-2 border-white shadow-xs scale-110';
+        } else if (isHovering) {
+          auraEl.className = 'absolute rounded-full pointer-events-none transition-all duration-150 ease-out will-change-transform w-8 h-8 -top-4 -left-4 bg-emerald-400/30 border border-emerald-300/50 shadow-xs scale-105';
+          dotEl.className = 'absolute rounded-full pointer-events-none transition-transform duration-100 ease-out will-change-transform w-3.5 h-3.5 -top-[7px] -left-[7px] bg-emerald-500 border-2 border-white shadow-xs scale-110';
+        } else {
+          auraEl.className = 'absolute rounded-full pointer-events-none transition-all duration-150 ease-out will-change-transform w-6 h-6 -top-3 -left-3 bg-sky-400/20 border border-sky-300/30';
+          dotEl.className = 'absolute rounded-full pointer-events-none transition-transform duration-100 ease-out will-change-transform w-3 h-3 -top-1.5 -left-1.5 bg-sky-600 border border-white shadow-xs';
+        }
+      }
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
-      setIsClicking(true);
-      const newRipple = { id: Date.now(), x: e.clientX, y: e.clientY };
-      setRipples(prev => [...prev.slice(-4), newRipple]);
-      setTimeout(() => {
-        setRipples(prev => prev.filter(r => r.id !== newRipple.id));
-      }, 700);
+    // Render loop using requestAnimationFrame for 60/120fps stutter-free movement
+    const renderLoop = () => {
+      if (isVisible && !isHidden) {
+        const dotTransform = `translate3d(${targetX}px, ${targetY}px, 0) ${isClicking ? 'scale(0.8)' : 'scale(1)'}`;
+        const auraTransform = `translate3d(${targetX}px, ${targetY}px, 0) ${isClicking ? 'scale(0.85)' : 'scale(1)'}`;
+
+        dotEl.style.transform = dotTransform;
+        auraEl.style.transform = auraTransform;
+      }
+      animationFrameId = requestAnimationFrame(renderLoop);
     };
 
-    const handleMouseUp = () => {
-      setIsClicking(false);
+    animationFrameId = requestAnimationFrame(renderLoop);
+
+    const onMouseMove = (e: MouseEvent) => {
+      targetX = e.clientX;
+      targetY = e.clientY;
+
+      if (!isVisible) {
+        isVisible = true;
+        dotEl.style.opacity = '1';
+        auraEl.style.opacity = '1';
+      }
+
+      updateInteractiveState(e.target as HTMLElement | null);
     };
 
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
+    const onMouseDown = () => {
+      isClicking = true;
+      if (dotEl && !prefersReducedMotion) {
+        dotEl.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) scale(0.8)`;
+      }
+    };
+
+    const onMouseUp = () => {
+      isClicking = false;
+      if (dotEl && !prefersReducedMotion) {
+        dotEl.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) scale(1)`;
+      }
+    };
+
+    const onMouseLeave = () => {
+      isVisible = false;
+      dotEl.style.opacity = '0';
+      auraEl.style.opacity = '0';
+    };
+
+    const onMouseEnter = () => {
+      isVisible = true;
+      dotEl.style.opacity = '1';
+      auraEl.style.opacity = '1';
+    };
+
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('mousedown', onMouseDown, { passive: true });
+    window.addEventListener('mouseup', onMouseUp, { passive: true });
+    document.addEventListener('mouseleave', onMouseLeave);
+    document.addEventListener('mouseenter', onMouseEnter);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('mouseleave', onMouseLeave);
+      document.removeEventListener('mouseenter', onMouseEnter);
     };
   }, []);
 
-  if (isTouchDevice || position.x < 0) return null;
-
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden select-none">
-      {/* Click Ripples */}
-      {ripples.map((ripple) => (
-        <span
-          key={ripple.id}
-          className="absolute rounded-full border-2 border-teal-400 bg-teal-200/30 animate-ping duration-700 pointer-events-none"
-          style={{
-            left: ripple.x - 20,
-            top: ripple.y - 20,
-            width: 40,
-            height: 40
-          }}
-        />
-      ))}
-
-      {/* Main Cursor Wand / Indicator */}
+    <div
+      id="wonder-meadow-custom-pointer-layer"
+      className="pointer-events-none fixed inset-0 z-50 overflow-hidden select-none hidden md:block"
+      aria-hidden="true"
+    >
+      {/* Soft Ambient Meadow Aura (Follows without lag) */}
       <div
-        ref={cursorRef}
-        className="fixed top-0 left-0 transition-transform duration-75 ease-out pointer-events-none will-change-transform"
-        style={{
-          transform: `translate3d(${position.x}px, ${position.y}px, 0)`
-        }}
-      >
-        {/* Soft glowing aura */}
-        <div
-          className={`absolute -top-4 -left-4 rounded-full transition-all duration-300 ${
-            isHoveringZone
-              ? 'w-12 h-12 bg-amber-400/35 blur-md scale-125'
-              : isHoveringInteractive
-              ? 'w-10 h-10 bg-teal-400/30 blur-sm scale-110'
-              : 'w-8 h-8 bg-sky-300/20 blur-[2px] scale-100'
-          }`}
-        />
+        ref={cursorAuraRef}
+        className="absolute rounded-full pointer-events-none opacity-0 will-change-transform transition-opacity duration-150"
+        style={{ transform: 'translate3d(-100px, -100px, 0)' }}
+      />
 
-        {/* Center dot / ring */}
-        <div
-          className={`relative rounded-full flex items-center justify-center transition-all duration-200 shadow-md ${
-            isClicking
-              ? 'scale-75 bg-teal-600'
-              : isHoveringZone
-              ? 'w-7 h-7 -top-3.5 -left-3.5 bg-gradient-to-tr from-amber-400 to-yellow-300 border-2 border-white scale-110 ring-4 ring-amber-300/40'
-              : isHoveringInteractive
-              ? 'w-6 h-6 -top-3 -left-3 bg-teal-500 border-2 border-white scale-110 ring-4 ring-teal-200/50'
-              : 'w-4 h-4 -top-2 -left-2 bg-slate-800 border border-white'
-          }`}
-        >
-          {isHoveringZone && (
-            <span className="text-[11px] animate-spin leading-none">✨</span>
-          )}
-        </div>
-      </div>
+      {/* Main Sharp Wonder Dot */}
+      <div
+        ref={cursorDotRef}
+        className="absolute rounded-full pointer-events-none opacity-0 will-change-transform transition-opacity duration-150"
+        style={{ transform: 'translate3d(-100px, -100px, 0)' }}
+      />
     </div>
   );
 };

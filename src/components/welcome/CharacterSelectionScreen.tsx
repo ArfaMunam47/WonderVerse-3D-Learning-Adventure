@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { ExplorerCharacter, ExplorerCharacterId, UserProgress } from '../../types';
-import { EXPLORER_CHARACTERS, CHARACTER_UNLOCK_CONDITIONS, isCharacterUnlocked } from '../../data/charactersData';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ExplorerCharacterId, UserProgress } from '../../types';
 import { audioService } from '../../utils/audio';
 import { CharacterVisual } from './CharacterVisual';
-import { ArrowLeft, Check, Volume2, Lock, Star, Sparkles, Shield } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Lock, Sparkles } from 'lucide-react';
+import maxiPng from '../../assets/characters/maxi.png';
+import mayaPng from '../../assets/characters/maya.png';
+import lumiPng from '../../assets/characters/lumi.png';
 
 interface CharacterSelectionScreenProps {
   selectedCharacterId: ExplorerCharacterId;
@@ -15,333 +17,363 @@ interface CharacterSelectionScreenProps {
   progress?: UserProgress | { stars: number } | null;
 }
 
+interface FriendData {
+  id: ExplorerCharacterId;
+  name: string;
+  personality: string;
+  themeColor: string;
+  imageSrc?: string;
+  isUnlocked: boolean;
+}
+
 export const CharacterSelectionScreen: React.FC<CharacterSelectionScreenProps> = ({
   selectedCharacterId,
   onSelectCharacter,
   onConfirm,
   onBack,
-  onOpenParentArea,
-  isIngameModal = false,
-  progress = { stars: 5 }
+  isIngameModal = false
 }) => {
-  const [activeId, setActiveId] = useState<ExplorerCharacterId>(selectedCharacterId);
-  const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
-
-  const selectedChar = EXPLORER_CHARACTERS.find((c) => c.id === activeId) || EXPLORER_CHARACTERS[0];
-  const isSelectedUnlocked = isCharacterUnlocked(activeId, progress);
-  const unlockCondition = CHARACTER_UNLOCK_CONDITIONS[activeId];
-  const userStars = progress?.stars ?? 0;
-
-  // Calculate friends unlocked count (excluding mystery future slot)
-  const unlockedCount = EXPLORER_CHARACTERS.filter(
-    (c) => !c.isFutureSlot && isCharacterUnlocked(c.id, progress)
-  ).length;
-  const totalPlayableCount = EXPLORER_CHARACTERS.filter((c) => !c.isFutureSlot).length;
-
-  const handlePickCharacter = (char: ExplorerCharacter) => {
-    setActiveId(char.id);
-    const unlocked = isCharacterUnlocked(char.id, progress);
-    if (unlocked && !char.isFutureSlot) {
-      onSelectCharacter(char.id);
-    }
-    audioService.playPop();
-
-    // Spoken voice greeting
-    if ('speechSynthesis' in window && !char.isFutureSlot) {
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(char.voiceGreeting);
-        utterance.rate = 0.92;
-        utterance.pitch = 1.25;
-        setIsPlayingVoice(true);
-        utterance.onend = () => setIsPlayingVoice(false);
-        utterance.onerror = () => setIsPlayingVoice(false);
-        window.speechSynthesis.speak(utterance);
-      } catch {
-        setIsPlayingVoice(false);
+  // Available friends data
+  const friendsList: FriendData[] = useMemo(
+    () => [
+      {
+        id: 'curious_explorer',
+        name: 'MAXI',
+        personality: 'Explorer',
+        themeColor: '#16A34A',
+        imageSrc: maxiPng,
+        isUnlocked: true
+      },
+      {
+        id: 'nature_explorer',
+        name: 'MAYA',
+        personality: 'Creative',
+        themeColor: '#DB2777',
+        imageSrc: mayaPng,
+        isUnlocked: true
+      },
+      {
+        id: 'forest_fawn',
+        name: 'LUMI',
+        personality: 'Playful',
+        themeColor: '#7C3AED',
+        imageSrc: lumiPng,
+        isUnlocked: true
+      },
+      {
+        id: 'little_inventor',
+        name: 'MYSTERY FRIEND',
+        personality: 'Keep exploring to unlock',
+        themeColor: '#64748B',
+        isUnlocked: false
       }
+    ],
+    []
+  );
+
+  // Active selected friend
+  const initialActive = friendsList.some((f) => f.id === selectedCharacterId)
+    ? selectedCharacterId
+    : 'curious_explorer';
+
+  const [activeId, setActiveId] = useState<ExplorerCharacterId>(initialActive);
+  const [lockedNotice, setLockedNotice] = useState<string | null>(null);
+
+  const activeIndex = Math.max(
+    0,
+    friendsList.findIndex((f) => f.id === activeId)
+  );
+  const currentFriend = friendsList[activeIndex] || friendsList[0];
+  const isCurrentUnlocked = currentFriend.isUnlocked;
+
+  // Handle character selection with gentle audio feedback
+  const handleSelect = (friend: FriendData) => {
+    audioService.playPop();
+    setActiveId(friend.id);
+
+    if (friend.isUnlocked) {
+      onSelectCharacter(friend.id);
+      setLockedNotice(null);
+    } else {
+      setLockedNotice('Keep exploring to unlock your new friend! ✨');
+      setTimeout(() => setLockedNotice(null), 3000);
     }
   };
 
-  const handleConfirm = () => {
-    if (!isSelectedUnlocked || selectedChar.isFutureSlot) return;
+  // Mobile navigation handlers
+  const handlePrev = () => {
+    const prevIdx = (activeIndex - 1 + friendsList.length) % friendsList.length;
+    handleSelect(friendsList[prevIdx]);
+  };
+
+  const handleNext = () => {
+    const nextIdx = (activeIndex + 1) % friendsList.length;
+    handleSelect(friendsList[nextIdx]);
+  };
+
+  // Keyboard navigation for accessibility
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrev();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === 'Enter') {
+        if (isCurrentUnlocked) {
+          handleExplore();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeIndex, isCurrentUnlocked]);
+
+  // Primary action button handler
+  const handleExplore = () => {
+    if (!isCurrentUnlocked) {
+      setLockedNotice('Please choose an available friend to explore!');
+      return;
+    }
     audioService.playSparkle();
     onConfirm(activeId);
   };
 
   return (
-    <div
-      id="character-selection-screen"
+    <main
+      id="choose-your-friend-screen"
+      role="main"
       className={`${
         isIngameModal
-          ? 'fixed inset-0 z-50 bg-amber-950/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 md:p-8 animate-in fade-in select-none'
-          : 'min-h-screen w-full bg-gradient-to-b from-[#BAE6FD] via-[#F0F9FF] to-[#D1FAE5] flex flex-col justify-between p-4 sm:p-6 md:p-8 select-none overflow-x-hidden overflow-y-auto'
+          ? 'fixed inset-0 z-50 bg-amber-950/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 select-none'
+          : 'h-screen w-screen bg-gradient-to-b from-[#E0F2FE] via-[#F0FDF4] to-[#DCFCE7] flex flex-col justify-between p-3 sm:p-5 md:p-6 select-none overflow-hidden'
       }`}
     >
       <div
-        className={`${
+        className={`w-full mx-auto flex flex-col justify-between h-full ${
           isIngameModal
-            ? 'w-full max-w-4xl max-h-[92vh] bg-[#FFFDF7] rounded-3xl border-2 border-amber-300 shadow-2xl overflow-y-auto p-4 sm:p-6 flex flex-col'
-            : 'max-w-5xl w-full mx-auto flex flex-col flex-1 my-auto'
+            ? 'max-w-4xl max-h-[92vh] bg-[#FFFDF7] rounded-3xl border-2 border-amber-300 shadow-2xl p-4 sm:p-6 overflow-hidden'
+            : 'max-w-5xl'
         }`}
       >
-        {/* 1. TOP NAVBAR / HEADER BAR */}
-        <header className="flex items-center justify-between gap-3 mb-4 sm:mb-6 shrink-0">
+        {/* ============================================================
+            1. TOP: Back Button, Title, Subtitle
+            ============================================================ */}
+        <header className="relative flex items-center justify-between w-full shrink-0 min-h-[44px] sm:min-h-[52px]">
           {/* Back Button */}
           {onBack ? (
             <button
               type="button"
-              id="back-to-welcome-btn"
+              id="back-button"
               onClick={() => {
                 audioService.playPop();
                 onBack();
               }}
-              className="h-10 px-3.5 sm:px-4 rounded-2xl bg-white/95 hover:bg-white text-slate-700 font-display font-bold text-xs sm:text-sm flex items-center gap-2 border border-amber-200 shadow-xs cursor-pointer active:scale-95 transition-all shrink-0"
-              aria-label="Back to Previous Screen"
+              className="h-11 sm:h-12 px-3.5 sm:px-5 rounded-2xl bg-white hover:bg-stone-50 active:scale-95 text-stone-800 font-display font-black text-sm sm:text-base flex items-center gap-1.5 border-2 border-stone-200 shadow-xs cursor-pointer transition-all shrink-0 z-10"
+              aria-label="Back to previous screen"
             >
-              <ArrowLeft className="w-4 h-4 text-slate-600" />
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-stone-700 stroke-[2.5]" />
               <span>Back</span>
             </button>
           ) : (
-            <div className="w-16" />
+            <div className="w-12 sm:w-16" />
           )}
 
-          {/* Center Brand / Screen Title */}
-          <div className="text-center flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-amber-950 tracking-tight leading-tight">
+          {/* Title & Subtitle */}
+          <div className="text-center px-2 flex-1">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-stone-900 tracking-tight leading-tight">
               Choose Your Friend
             </h1>
-            <p className="text-xs sm:text-sm text-slate-700 font-medium truncate mt-0.5">
-              Pick a friend to explore Wonder Meadow with!
+            <p className="text-xs sm:text-sm md:text-base text-stone-700 font-bold mt-0.5 max-w-sm sm:max-w-none mx-auto line-clamp-1">
+              Who will explore Wonder Meadow with you?
             </p>
           </div>
 
-          {/* Right Header: Stars Counter & Optional Parent Area */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 font-display font-black text-xs sm:text-sm shadow-xs">
-              <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
-              <span>{userStars} Stars</span>
-            </div>
-
-            {onOpenParentArea && !isIngameModal && (
-              <button
-                type="button"
-                id="char-select-parent-btn"
-                onClick={() => {
-                  audioService.playPop();
-                  onOpenParentArea();
-                }}
-                className="h-10 px-3 rounded-2xl bg-white/95 hover:bg-white text-sky-900 border border-sky-200 shadow-xs hidden sm:flex items-center gap-1.5 text-xs font-display font-bold cursor-pointer active:scale-95 transition-all"
-                title="Parent Area"
-              >
-                <Shield className="w-4 h-4 text-sky-700" />
-                <span>Parent Area</span>
-              </button>
-            )}
-          </div>
+          {/* Symmetrical Spacer */}
+          <div className="w-12 sm:w-16 shrink-0" />
         </header>
 
-        {/* 2. COLLECTION PROGRESS BAR (My Friends: X / 8 Unlocked) */}
-        <div className="mb-4 bg-white/90 px-4 py-2.5 rounded-2xl border border-amber-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm font-display font-black text-amber-950">
-              🌟 My Friends Collection:
-            </span>
-            <span className="text-xs sm:text-sm font-bold text-slate-700">
-              {unlockedCount} of {totalPlayableCount} Friends Unlocked
-            </span>
-          </div>
+        {/* ============================================================
+            2. MIDDLE: CHARACTER STAGE
+               - Mobile: 1 Centered Character with Carousel Navigation
+               - Tablet & Desktop: Clean Horizontal Showcase of Isolated Characters
+            ============================================================ */}
 
-          {/* Progress Track */}
-          <div className="w-full sm:w-48 h-2.5 bg-amber-100 rounded-full overflow-hidden border border-amber-200">
+        {/* --- A. MOBILE VIEW (< 640px) --- */}
+        <section
+          aria-label="Mobile Character Selector"
+          className="flex sm:hidden flex-1 flex-col items-center justify-center min-h-0 my-1 w-full max-w-sm mx-auto px-2"
+        >
+          <div className="relative w-full flex flex-col items-center justify-center flex-1 min-h-0">
+            {/* Left Previous Button */}
+            <button
+              type="button"
+              id="mobile-prev-btn"
+              onClick={handlePrev}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white text-stone-800 shadow-md border-2 border-stone-200 flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
+              aria-label="Previous friend"
+            >
+              <ChevronLeft className="w-6 h-6 stroke-[3]" />
+            </button>
+
+            {/* Right Next Button */}
+            <button
+              type="button"
+              id="mobile-next-btn"
+              onClick={handleNext}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white text-stone-800 shadow-md border-2 border-stone-200 flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
+              aria-label="Next friend"
+            >
+              <ChevronRight className="w-6 h-6 stroke-[3]" />
+            </button>
+
+            {/* Single Isolated Character Hero Stage */}
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-amber-500 rounded-full transition-all duration-500"
-              style={{ width: `${(unlockedCount / totalPlayableCount) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* 3. RESPONSIVE CHARACTER CARDS GRID (Spacious, Zero Overlap, Visual Vector Illustrations) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 my-auto py-1">
-          {EXPLORER_CHARACTERS.map((char) => {
-            const isSelected = char.id === activeId;
-            const isUnlocked = isCharacterUnlocked(char.id, progress);
-            const condition = CHARACTER_UNLOCK_CONDITIONS[char.id];
-
-            return (
-              <button
-                type="button"
-                key={char.id}
-                id={`char-card-${char.id}`}
-                onClick={() => handlePickCharacter(char)}
-                className={`relative flex flex-col items-center text-center p-3.5 sm:p-4 rounded-3xl border-2 transition-all duration-200 cursor-pointer ${
-                  isSelected
-                    ? 'bg-white shadow-xl scale-[1.02] ring-4 ring-amber-300'
-                    : isUnlocked && !char.isFutureSlot
-                    ? 'bg-white/95 hover:bg-white border-amber-200 hover:border-amber-300 hover:shadow-md'
-                    : 'bg-stone-50/90 border-stone-200 opacity-80 hover:opacity-95'
-                }`}
-                style={{
-                  borderColor: isSelected ? char.themeColor : undefined
-                }}
-              >
-                {/* Active Selection Checkmark */}
-                {isSelected && isUnlocked && !char.isFutureSlot && (
-                  <div
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-white flex items-center justify-center shadow-md animate-bounce-subtle z-10"
-                    style={{ backgroundColor: char.themeColor }}
-                  >
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  </div>
-                )}
-
-                {/* Locked / Requirement Pill */}
-                {!isUnlocked && (
-                  <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-950 flex items-center gap-1 text-[11px] font-black shadow-2xs z-10 border border-amber-300">
-                    <Lock className="w-3 h-3 text-amber-800" />
-                    <span>{condition?.requiredStars ?? 0}⭐</span>
-                  </div>
-                )}
-
-                {/* Character Vector Art */}
-                <div className="mb-2 transition-transform">
-                  <CharacterVisual
-                    characterId={char.id}
-                    isUnlocked={isUnlocked}
-                    isSelected={isSelected}
-                    size="md"
-                    animate={isSelected}
-                  />
-                </div>
-
-                {/* Character Name & Archetype Tag */}
-                <div className="w-full">
-                  <div className="flex items-center justify-center gap-1">
-                    <span className="text-base sm:text-lg font-display font-black text-amber-950 leading-tight">
-                      {char.name}
-                    </span>
-                    <span className="text-xs">{char.badge}</span>
-                  </div>
-
-                  <span
-                    className="text-[10px] sm:text-xs font-bold block mt-1 px-2.5 py-0.5 rounded-full mx-auto w-fit"
-                    style={{
-                      backgroundColor: isUnlocked && !char.isFutureSlot ? `${char.themeColor}15` : '#E2E8F0',
-                      color: isUnlocked && !char.isFutureSlot ? char.themeColor : '#64748B'
-                    }}
-                  >
-                    {char.title}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 4. ACTIVE CHARACTER SPOTLIGHT & CONFIRMATION STRIP */}
-        <div className="mt-4 p-4 sm:p-5 rounded-3xl bg-white border-2 border-amber-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3.5 sm:gap-4 text-left w-full md:w-auto">
-            {/* Spotlight Avatar */}
-            <div className="shrink-0">
-              <CharacterVisual
-                characterId={selectedChar.id}
-                isUnlocked={isSelectedUnlocked}
-                isSelected={true}
-                size="sm"
-              />
-            </div>
-
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base sm:text-lg font-display font-black text-amber-950">
-                  ✨ {selectedChar.name}
-                </h3>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-950 border border-amber-200 font-bold">
-                  {selectedChar.title}
-                </span>
-                {!isSelectedUnlocked && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold flex items-center gap-1">
-                    <Lock className="w-3 h-3 text-amber-800" />
-                    <span>Locked</span>
-                  </span>
-                )}
+              className={`flex flex-col items-center justify-center flex-1 min-h-0 w-full px-12 transition-all duration-300 ${
+                isCurrentUnlocked ? 'scale-100' : 'scale-95 opacity-85'
+              }`}
+            >
+              <div className="relative flex items-center justify-center w-full flex-1 max-h-[220px] my-auto">
+                <CharacterVisual
+                  characterId={currentFriend.id}
+                  isUnlocked={currentFriend.isUnlocked}
+                  isSelected={true}
+                  size="hero"
+                  className="animate-in fade-in zoom-in-95 duration-200"
+                />
               </div>
 
-              {/* Description or Unlock Requirement */}
-              {isSelectedUnlocked && !selectedChar.isFutureSlot ? (
-                <p className="text-xs sm:text-sm text-slate-700 font-medium max-w-xl mt-0.5 leading-snug">
-                  {selectedChar.outfitDescription} • "{selectedChar.tagline}"
+              {/* Name & Personality */}
+              <div className="text-center mt-1 shrink-0">
+                <div className="flex items-center justify-center gap-1.5">
+                  <h2 className="text-xl font-display font-black text-stone-900 tracking-tight leading-none">
+                    {currentFriend.name}
+                  </h2>
+                  {!isCurrentUnlocked && (
+                    <Lock className="w-4 h-4 text-stone-500 stroke-[2.5]" />
+                  )}
+                </div>
+                <p
+                  className="text-xs font-extrabold mt-0.5 tracking-wide"
+                  style={{
+                    color: isCurrentUnlocked ? currentFriend.themeColor : '#64748B'
+                  }}
+                >
+                  {currentFriend.personality}
                 </p>
-              ) : selectedChar.isFutureSlot ? (
-                <p className="text-xs sm:text-sm text-slate-600 font-bold max-w-xl mt-0.5">
-                  ☁️ Secret companion preparing to join Wonder Meadow in future expansions!
-                </p>
-              ) : (
-                <p className="text-xs sm:text-sm text-amber-950 font-bold max-w-xl mt-0.5">
-                  ⭐ {unlockCondition?.requiredCondition} (You have {userStars} / {unlockCondition?.requiredStars} stars)
-                </p>
-              )}
+              </div>
+            </div>
+
+            {/* Mobile Navigation Counter "< 1 / 4 >" & Dots */}
+            <div className="flex items-center justify-center gap-2 mt-2 shrink-0">
+              <span className="text-xs font-bold text-stone-600 px-2 py-0.5 rounded-full bg-white/80 border border-stone-200">
+                {activeIndex + 1} / {friendsList.length}
+              </span>
             </div>
           </div>
+        </section>
 
-          {/* Action Buttons: Voice Preview & ENTER WONDER MEADOW */}
-          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
-            {/* Voice Preview Button */}
-            {!selectedChar.isFutureSlot && (
-              <button
-                type="button"
-                id="companion-voice-btn"
-                onClick={() => {
-                  if ('speechSynthesis' in window) {
-                    try {
-                      window.speechSynthesis.cancel();
-                      const utterance = new SpeechSynthesisUtterance(selectedChar.voiceGreeting);
-                      utterance.rate = 0.92;
-                      utterance.pitch = 1.25;
-                      setIsPlayingVoice(true);
-                      utterance.onend = () => setIsPlayingVoice(false);
-                      utterance.onerror = () => setIsPlayingVoice(false);
-                      window.speechSynthesis.speak(utterance);
-                    } catch {
-                      setIsPlayingVoice(false);
-                    }
-                  }
-                }}
-                className="h-12 px-3.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-200 font-display font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                title="Hear companion greeting"
-              >
-                <Volume2 className={`w-4 h-4 text-amber-800 ${isPlayingVoice ? 'animate-bounce' : ''}`} />
-                <span>Hear Greeting</span>
-              </button>
-            )}
+        {/* --- B. TABLET & DESKTOP VIEW (≥ 640px) --- */}
+        <section
+          aria-label="Friends Showcase"
+          className="hidden sm:flex flex-1 items-center justify-center min-h-0 my-2 w-full max-w-5xl mx-auto px-4"
+        >
+          <div className="grid grid-cols-4 gap-3 md:gap-6 lg:gap-8 items-end justify-items-center w-full max-w-4xl mx-auto py-2">
+            {friendsList.map((friend) => {
+              const isSelected = friend.id === activeId;
+              const isUnlocked = friend.isUnlocked;
 
-            {/* Enter / Continue Button */}
-            {isSelectedUnlocked && !selectedChar.isFutureSlot ? (
-              <button
-                type="button"
-                id="enter-wonder-meadow-btn"
-                onClick={handleConfirm}
-                className="h-12 sm:h-13 px-6 sm:px-8 rounded-2xl font-display font-black text-sm sm:text-base text-white shadow-md hover:shadow-lg cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2 flex-1 md:flex-initial"
-                style={{
-                  backgroundColor: selectedChar.themeColor
-                }}
-              >
-                <Sparkles className="w-4 h-4 text-yellow-200 fill-white" />
-                <span>{isIngameModal ? `Switch to ${selectedChar.name}` : `ENTER WONDER MEADOW →`}</span>
-              </button>
-            ) : (
-              <div className="h-12 px-5 rounded-2xl bg-stone-200 text-slate-600 font-display font-bold text-xs sm:text-sm flex items-center justify-center gap-2 flex-1 md:flex-initial">
-                <Lock className="w-4 h-4 text-slate-500" />
-                <span>
-                  {selectedChar.isFutureSlot
-                    ? 'Coming Soon!'
-                    : `Earn ${unlockCondition?.requiredStars ?? 0} stars to unlock`}
-                </span>
-              </div>
-            )}
+              return (
+                <button
+                  type="button"
+                  key={friend.id}
+                  id={`friend-card-${friend.id}`}
+                  onClick={() => handleSelect(friend)}
+                  aria-selected={isSelected}
+                  aria-label={`${friend.name}, ${friend.personality}`}
+                  className={`group relative flex flex-col items-center justify-end text-center p-3 md:p-4 rounded-3xl transition-all duration-300 cursor-pointer w-full max-w-[200px] md:max-w-[230px] ${
+                    isSelected
+                      ? 'bg-white/80 shadow-lg scale-105 ring-3 ring-amber-400/80 -translate-y-2'
+                      : 'hover:bg-white/40 hover:scale-100 opacity-80 hover:opacity-100'
+                  }`}
+                >
+                  {/* Selected Indicator Badge */}
+                  <div className="w-full flex justify-center min-h-[22px] mb-1">
+                    {isSelected && isUnlocked && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-stone-900 font-display font-black text-[11px] md:text-xs shadow-xs flex items-center gap-1 animate-in fade-in">
+                        <Sparkles className="w-3 h-3 fill-stone-900" />
+                        <span>SELECTED</span>
+                      </span>
+                    )}
+                    {!isUnlocked && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-700 font-bold text-[11px] flex items-center gap-1">
+                        <Lock className="w-3 h-3 stroke-[2.5]" />
+                        <span>LOCKED</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Standalone 3D Character Asset */}
+                  <div className="w-full flex justify-center my-auto">
+                    <CharacterVisual
+                      characterId={friend.id}
+                      isUnlocked={friend.isUnlocked}
+                      isSelected={isSelected}
+                      size="lg"
+                    />
+                  </div>
+
+                  {/* Character Name & Single Personality Word */}
+                  <div className="w-full mt-2">
+                    <h2 className="text-lg md:text-xl font-display font-black text-stone-900 tracking-tight leading-tight">
+                      {friend.name}
+                    </h2>
+                    <p
+                      className="text-xs md:text-sm font-extrabold mt-0.5 tracking-wide line-clamp-1"
+                      style={{
+                        color: isUnlocked ? friend.themeColor : '#64748B'
+                      }}
+                    >
+                      {friend.personality}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </section>
+
+        {/* Gentle Notice (if locked friend is tapped) */}
+        {lockedNotice && (
+          <div
+            role="status"
+            className="shrink-0 my-1 py-1 px-4 rounded-full bg-amber-100 border border-amber-300 text-stone-900 text-xs sm:text-sm font-bold text-center mx-auto shadow-xs animate-in fade-in"
+          >
+            {lockedNotice}
+          </div>
+        )}
+
+        {/* ============================================================
+            3. BOTTOM: PRIMARY ACTION BUTTON ("Let's Explore!")
+            ============================================================ */}
+        <footer className="w-full shrink-0 flex flex-col items-center justify-center pt-1 pb-1 sm:pt-2">
+          <button
+            type="button"
+            id="lets-explore-btn"
+            onClick={handleExplore}
+            className="w-full sm:w-auto min-w-[260px] sm:min-w-[340px] h-13 sm:h-15 px-8 sm:px-12 rounded-2xl sm:rounded-3xl font-display font-black text-lg sm:text-xl md:text-2xl text-white shadow-lg hover:shadow-xl active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: isCurrentUnlocked ? currentFriend.themeColor : '#94A3B8',
+              cursor: isCurrentUnlocked ? 'pointer' : 'not-allowed'
+            }}
+            aria-label={`Let's Explore Wonder Meadow with ${currentFriend.name}`}
+          >
+            <span>Let's Explore!</span>
+          </button>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 };

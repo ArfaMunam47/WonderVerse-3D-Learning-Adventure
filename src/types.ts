@@ -39,6 +39,9 @@ export interface AccessibilitySettings {
 
 export interface UserProgress {
   stars: number;
+  coins?: number;
+  gems?: number;
+  clovers?: number;
   completedActivities: string[];
   discoveredItems: string[];
   stickersUnlocked: string[];

@@ -255,6 +255,18 @@ export default function App() {
     }));
   }, []);
 
+  const handleCollectItem = useCallback((type: 'coin' | 'gem' | 'clover' | 'star', value = 1) => {
+    audioService.playSparkle();
+    setProgress((prev) => {
+      const updated = { ...prev };
+      if (type === 'coin') updated.coins = (updated.coins || 0) + value;
+      else if (type === 'gem') updated.gems = (updated.gems || 0) + value;
+      else if (type === 'clover') updated.clovers = (updated.clovers || 0) + value;
+      else if (type === 'star') updated.stars = updated.stars + value;
+      return updated;
+    });
+  }, []);
+
   const handleUpdateAccessibility = useCallback((newSettings: Partial<AccessibilitySettings>) => {
     setAccessibility((prev) => {
       const updated = { ...prev, ...newSettings };
@@ -450,26 +462,16 @@ export default function App() {
         />
       )}
 
-      {/* 3. PRIMARY GAME WORLD & EXPLORATION VIEW */}
+      {/* 3. PRIMARY GAME WORLD & EXPLORATION VIEW (Clean Full-Screen 3D Experience) */}
       {screenMode === 'world' && (
-        <>
-          {/* Top Navigation Bar */}
-          <TopNavBar
-            activeZoneId={activeZone}
-            onGoHome={() => {
-              if (activeZone) {
-                setActiveZone(null);
-              } else {
-                setScreenMode('welcome');
-              }
-            }}
+        <main className="relative flex-1 w-full h-full min-h-0 overflow-hidden">
+          <MeadowCanvas
+            activeZone={activeZone}
+            onSelectZone={handleSelectZone}
             onOpenMap={() => setIsMapOpen(true)}
             onOpenLearn={() => setIsLearnOpen(true)}
             onOpenRewards={() => setIsRewardsOpen(true)}
-            onOpenAccessibility={() => setIsAccessibilityOpen(true)}
             onOpenCaregiver={() => setIsCaregiverOpen(true)}
-            onOpenCharacterPicker={() => setIsCharacterPickerOpen(true)}
-            characterId={characterId}
             onOpenProfile={() => {
               if (user) {
                 setIsProfileOpen(true);
@@ -477,88 +479,84 @@ export default function App() {
                 setIsAuthOpen(true);
               }
             }}
-            stars={progress.stars}
-            accessibility={accessibility}
             onToggleSound={handleToggleSound}
+            soundEnabled={accessibility.soundEnabled}
+            reducedMotion={accessibility.reducedMotion}
+            gender={currentGender}
+            characterId={characterId}
+            destinationZone={profile?.favoriteZone || progress.favoriteZone}
+            onEarnStar={handleEarnStar}
+            coins={progress.coins || 0}
+            gems={progress.gems || 0}
+            clovers={progress.clovers || 0}
+            stars={progress.stars}
+            onCollectItem={handleCollectItem}
+            onOpenCharacterPicker={() => setIsCharacterPickerOpen(true)}
             user={user}
             profile={profile}
           />
 
-          {/* 3D World Viewport */}
-          <main className="relative flex-1 w-full min-h-0 overflow-hidden">
-            <MeadowCanvas
-              activeZone={activeZone}
-              onSelectZone={handleSelectZone}
-              onOpenMap={() => setIsMapOpen(true)}
-              reducedMotion={accessibility.reducedMotion}
-              gender={currentGender}
-              characterId={characterId}
-              destinationZone={profile?.favoriteZone || progress.favoriteZone}
-              onEarnStar={handleEarnStar}
-            />
-
-            {/* Active Zone Learning Overlays */}
-            {activeZone && (
-              <div
-                id="active-zone-view-overlay"
-                className="absolute inset-0 z-20 p-3 md:p-6 overflow-y-auto flex items-start justify-center animate-in fade-in zoom-in-95 pointer-events-auto bg-amber-950/30 backdrop-blur-xs"
-              >
-                <div className="w-full max-w-5xl my-auto">
-                  {activeZone === 'alphabet' && (
-                    <AlphabetGroveZone
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                      highContrast={accessibility.highContrast}
-                    />
-                  )}
-                  {activeZone === 'numbers' && (
-                    <NumberMeadowZone
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                    />
-                  )}
-                  {activeZone === 'fruits' && (
-                    <FruitOrchardZone
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                    />
-                  )}
-                  {activeZone === 'animals' && (
-                    <AnimalFriendsZone
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                    />
-                  )}
-                  {activeZone === 'creative' && (
-                    <CreativeCornerZone
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                    />
-                  )}
-                  {activeZone === 'music' && (
-                    <MusicBellsZone
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                    />
-                  )}
-                  {activeZone === 'stories' && (
-                    <StoryPavilionZone
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                    />
-                  )}
-                  {activeZone === 'stars' && (
-                    <StarObservatoryZone
-                      totalStars={progress.stars}
-                      onEarnStar={handleEarnStar}
-                      onBack={() => setActiveZone(null)}
-                    />
-                  )}
-                </div>
+          {/* Active Zone Learning Overlays */}
+          {activeZone && (
+            <div
+              id="active-zone-view-overlay"
+              className="absolute inset-0 z-30 p-3 md:p-6 overflow-y-auto flex items-start justify-center animate-in fade-in zoom-in-95 pointer-events-auto bg-stone-900/40 backdrop-blur-xs"
+            >
+              <div className="w-full max-w-5xl my-auto">
+                {activeZone === 'alphabet' && (
+                  <AlphabetGroveZone
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                    highContrast={accessibility.highContrast}
+                  />
+                )}
+                {activeZone === 'numbers' && (
+                  <NumberMeadowZone
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                  />
+                )}
+                {activeZone === 'fruits' && (
+                  <FruitOrchardZone
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                  />
+                )}
+                {activeZone === 'animals' && (
+                  <AnimalFriendsZone
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                  />
+                )}
+                {activeZone === 'creative' && (
+                  <CreativeCornerZone
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                  />
+                )}
+                {activeZone === 'music' && (
+                  <MusicBellsZone
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                  />
+                )}
+                {activeZone === 'stories' && (
+                  <StoryPavilionZone
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                  />
+                )}
+                {activeZone === 'stars' && (
+                  <StarObservatoryZone
+                    totalStars={progress.stars}
+                    onEarnStar={handleEarnStar}
+                    onBack={() => setActiveZone(null)}
+                  />
+                )}
               </div>
-            )}
-          </main>
-        </>
+            </div>
+          )}
+        </main>
       )}
 
       {/* IN-GAME CHARACTER PICKER MODAL (Switch characters anytime) */}

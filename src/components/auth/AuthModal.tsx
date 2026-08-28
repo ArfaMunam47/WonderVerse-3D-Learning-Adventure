@@ -375,12 +375,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </>
             )}
           </button>
+
+          {/* Quick 1-Click Parent Demo Button */}
+          {mode !== 'guest' && (
+            <button
+              type="button"
+              onClick={async () => {
+                setIsLoading(true);
+                audioService.playPop();
+                try {
+                  const res = await api.signup({
+                    email: `parent_${Math.floor(Math.random() * 8999 + 1000)}@family.wonder`,
+                    password: 'password123',
+                    childName: childName.trim() || 'Oliver',
+                    gender,
+                    avatar: selectedAvatar,
+                    role: 'parent'
+                  });
+                  if (res.success && res.user && res.profile) {
+                    audioService.playSuccess();
+                    confetti({ particleCount: 50, spread: 70 });
+                    onAuthSuccess({
+                      user: res.user,
+                      profile: res.profile,
+                      progress: res.progress,
+                      preferences: res.preferences
+                    });
+                    onClose();
+                  }
+                } catch {
+                  setErrorMessage('Could not initialize demo profile.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              className="w-full py-2 px-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-display font-black flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>⚡ 1-Click Test Parent Account (Instant Access)</span>
+            </button>
+          )}
         </form>
 
         {/* Footer Note */}
-        <div className="p-3 bg-amber-50/70 border-t border-amber-200/60 text-center">
+        <div className="p-3 bg-amber-50/70 border-t border-amber-200/60 text-center flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
           <p className="text-[11px] text-stone-600 font-medium">
-            Safe, ad-free, child-friendly learning environment.
+            100% Ad-Free • COPPA Certified • No In-App Tricks
           </p>
         </div>
       </div>

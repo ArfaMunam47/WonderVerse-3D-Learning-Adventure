@@ -62,22 +62,51 @@ export const RewardsModal: React.FC<RewardsModalProps> = ({
         </div>
 
         <div className="p-4 md:p-6 overflow-y-auto space-y-6 bg-[#FAF8F5]">
-          {/* Top Star Banner */}
-          <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-100 via-amber-50 to-yellow-100 border-2 border-amber-300/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 text-center sm:text-left">
-              <div className="w-16 h-16 rounded-2xl bg-amber-400 text-amber-950 flex items-center justify-center text-3xl shadow-sm">
-                ⭐
+          {/* Top Star & Collectibles Banner */}
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-100 via-amber-50 to-yellow-100 border-2 border-amber-300/80 shadow-xs flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4 text-center sm:text-left">
+                <div className="w-16 h-16 rounded-2xl bg-amber-400 text-amber-950 flex items-center justify-center text-3xl shadow-sm">
+                  ⭐
+                </div>
+                <div>
+                  <span className="text-xs font-display font-bold uppercase tracking-wider text-amber-800">
+                    Total Wonder Stars
+                  </span>
+                  <h4 className="text-3xl font-display font-black text-amber-950">
+                    {userStars} Stars Collected
+                  </h4>
+                  <p className="text-xs text-amber-900 mt-0.5">
+                    Keep exploring zones to discover letters, animals, fruits, and unlock new friends!
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-display font-bold uppercase tracking-wider text-amber-800">
-                  Total Wonder Stars
-                </span>
-                <h4 className="text-3xl font-display font-black text-amber-950">
-                  {userStars} Stars Collected
-                </h4>
-                <p className="text-xs text-amber-900 mt-0.5">
-                  Keep exploring zones to discover letters, animals, fruits, and unlock new friends!
-                </p>
+            </div>
+
+            {/* Meadow Treasures Grid */}
+            <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-amber-200/80">
+              <div className="p-2.5 rounded-2xl bg-white/90 border border-amber-200 flex items-center gap-2.5">
+                <span className="text-2xl">🪙</span>
+                <div>
+                  <span className="text-[10px] uppercase font-extrabold text-stone-500 block leading-tight">Gold Coins</span>
+                  <span className="text-sm font-display font-black text-stone-800">{progress.coins || 0}</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-2xl bg-white/90 border border-purple-200 flex items-center gap-2.5">
+                <span className="text-2xl">💎</span>
+                <div>
+                  <span className="text-[10px] uppercase font-extrabold text-purple-600 block leading-tight">Rainbow Gems</span>
+                  <span className="text-sm font-display font-black text-purple-950">{progress.gems || 0}</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-2xl bg-white/90 border border-emerald-200 flex items-center gap-2.5">
+                <span className="text-2xl">🍀</span>
+                <div>
+                  <span className="text-[10px] uppercase font-extrabold text-emerald-600 block leading-tight">Lucky Clovers</span>
+                  <span className="text-sm font-display font-black text-emerald-950">{progress.clovers || 0}</span>
+                </div>
               </div>
             </div>
           </div>

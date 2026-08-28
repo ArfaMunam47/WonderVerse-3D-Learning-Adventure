@@ -27,7 +27,11 @@ import {
   Check,
   User,
   Heart,
-  Menu
+  Menu,
+  CreditCard,
+  Shield,
+  HelpCircle,
+  FileText
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -44,7 +48,7 @@ interface ParentCaregiverAreaProps {
   onUpdateProfile?: (name: string, avatar: string, favoriteZone?: string | null, gender?: 'girl' | 'boy') => void;
 }
 
-type ParentTabId = 'overview' | 'learning_zones' | 'progress' | 'my_child' | 'characters' | 'settings';
+type ParentTabId = 'overview' | 'family_pass' | 'trust_safety' | 'learning_zones' | 'progress' | 'my_child' | 'characters' | 'settings';
 
 interface LearningZoneGuide {
   id: string;
@@ -218,6 +222,33 @@ export const ParentCaregiverArea: React.FC<ParentCaregiverAreaProps> = ({
   const [childFavoriteZone, setChildFavoriteZone] = useState<string>(profile?.favoriteZone || progress.favoriteZone || 'alphabet');
   const [savedSuccessMsg, setSavedSuccessMsg] = useState('');
 
+  // Family Pass & Subscription State
+  const [activePlan, setActivePlan] = useState<'free' | 'monthly' | 'lifetime'>(() => {
+    try {
+      return (localStorage.getItem('wonder_meadow_subscribed_plan') as any) || 'free';
+    } catch {
+      return 'free';
+    }
+  });
+  const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null);
+
+  const handleSelectPlan = (plan: 'free' | 'monthly' | 'lifetime') => {
+    setActivePlan(plan);
+    try {
+      localStorage.setItem('wonder_meadow_subscribed_plan', plan);
+    } catch {}
+    audioService.playSuccess();
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    setCheckoutNotice(
+      plan === 'monthly'
+        ? '🎉 Welcome to Wonder Meadow Family Pass (7-Day Trial Started)! All learning features unlocked.'
+        : plan === 'lifetime'
+        ? '👑 Lifetime Founder VIP Pass Activated! Thank you for supporting kid-first education.'
+        : 'Switched to Free Explorer plan.'
+    );
+    setTimeout(() => setCheckoutNotice(null), 6000);
+  };
+
   if (!isOpen) return null;
 
   const handleVerifyGate = (e: React.FormEvent) => {
@@ -288,6 +319,8 @@ export const ParentCaregiverArea: React.FC<ParentCaregiverAreaProps> = ({
 
   const navItems: { id: ParentTabId; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'family_pass', label: 'Family Pass & Plans', icon: <CreditCard className="w-4 h-4 text-amber-600" /> },
+    { id: 'trust_safety', label: 'Trust & COPPA Safety', icon: <Shield className="w-4 h-4 text-emerald-600" /> },
     { id: 'learning_zones', label: 'Learning Zones', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'progress', label: 'Child Progress', icon: <Award className="w-4 h-4" /> },
     { id: 'my_child', label: 'My Child', icon: <User className="w-4 h-4" /> },
@@ -517,7 +550,229 @@ export const ParentCaregiverArea: React.FC<ParentCaregiverAreaProps> = ({
                 </div>
               )}
 
-              {/* --- TAB 2: LEARNING ZONES --- */}
+              {/* --- TAB 2: FAMILY PASS & MONETIZATION PLANS --- */}
+              {activeTab === 'family_pass' && (
+                <div className="space-y-4 animate-in fade-in">
+                  {checkoutNotice && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2 animate-in zoom-in-95">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span>{checkoutNotice}</span>
+                    </div>
+                  )}
+
+                  {/* Header Banner */}
+                  <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 p-4 rounded-2xl text-stone-900 shadow-sm border border-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider font-extrabold text-amber-950">
+                        <Sparkles className="w-4 h-4 text-amber-950" />
+                        <span>Wonder Meadow All-Access</span>
+                      </div>
+                      <h4 className="text-base font-display font-black text-stone-950 mt-0.5">
+                        Build Lifelong Joy in Learning
+                      </h4>
+                      <p className="text-xs text-stone-900 font-medium max-w-xl">
+                        Unlock unlimited exploration, adaptive phonetic guidance, multi-child tracking, and printable offline worksheets. 100% ad-free forever.
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-xl border border-amber-300 text-center">
+                      <span className="text-[10px] uppercase font-black text-amber-900 block">Current Status</span>
+                      <span className="text-xs font-display font-black text-emerald-700 capitalize">
+                        {activePlan === 'free' ? '🌟 Free Explorer' : activePlan === 'monthly' ? '💎 Family Pass Active' : '👑 Lifetime VIP Active'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Plan Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Free Plan */}
+                    <div className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between ${activePlan === 'free' ? 'border-amber-400 bg-amber-50/50 shadow-sm' : 'border-stone-200 bg-white'}`}>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black uppercase text-stone-500">Free Tier</span>
+                          {activePlan === 'free' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">Current</span>
+                          )}
+                        </div>
+                        <div>
+                          <h5 className="text-base font-display font-black text-stone-900">Explorer Starter</h5>
+                          <p className="text-2xl font-display font-black text-stone-900 mt-1">$0 <span className="text-xs font-normal text-stone-500">forever</span></p>
+                        </div>
+                        <ul className="space-y-1.5 text-xs text-stone-600">
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Full 3D Meadow roaming</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> 8 core learning activities</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> In-game star & pouch rewards</li>
+                          <li className="flex items-center gap-1.5 text-stone-400"><X className="w-3.5 h-3.5 text-stone-300 shrink-0" /> Weekly email milestones</li>
+                          <li className="flex items-center gap-1.5 text-stone-400"><X className="w-3.5 h-3.5 text-stone-300 shrink-0" /> Printable activity kits</li>
+                        </ul>
+                      </div>
+
+                      <button
+                        onClick={() => handleSelectPlan('free')}
+                        disabled={activePlan === 'free'}
+                        className={`w-full mt-4 py-2 px-3 rounded-xl text-xs font-display font-black cursor-pointer transition-all ${
+                          activePlan === 'free'
+                            ? 'bg-stone-100 text-stone-500 cursor-default'
+                            : 'bg-stone-800 hover:bg-stone-900 text-white shadow-xs active:scale-95'
+                        }`}
+                      >
+                        {activePlan === 'free' ? 'Active Plan' : 'Select Free Plan'}
+                      </button>
+                    </div>
+
+                    {/* Monthly Family Pass */}
+                    <div className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative ${activePlan === 'monthly' ? 'border-sky-500 bg-sky-50/50 shadow-md ring-2 ring-sky-300' : 'border-sky-300 bg-white'}`}>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black uppercase text-sky-700">Monthly Pass</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">7-Day Free Trial</span>
+                        </div>
+                        <div>
+                          <h5 className="text-base font-display font-black text-stone-900">Family Explorer</h5>
+                          <p className="text-2xl font-display font-black text-stone-900 mt-1">$4.99 <span className="text-xs font-normal text-stone-500">/ month</span></p>
+                        </div>
+                        <ul className="space-y-1.5 text-xs text-stone-700">
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> <b>Unlimited 3D world access</b></li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Up to 4 child profiles</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Weekly developmental emails</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> 50+ Printable worksheets</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Cancel anytime with 1 click</li>
+                        </ul>
+                      </div>
+
+                      <button
+                        onClick={() => handleSelectPlan('monthly')}
+                        className={`w-full mt-4 py-2.5 px-3 rounded-xl text-xs font-display font-black cursor-pointer shadow-md transition-all active:scale-95 ${
+                          activePlan === 'monthly'
+                            ? 'bg-sky-600 text-white hover:bg-sky-700'
+                            : 'bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white'
+                        }`}
+                      >
+                        {activePlan === 'monthly' ? '✓ Plan Active' : 'Start 7-Day Free Trial'}
+                      </button>
+                    </div>
+
+                    {/* Lifetime Founder Pass */}
+                    <div className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative bg-gradient-to-b from-amber-50 to-yellow-50/70 ${activePlan === 'lifetime' ? 'border-amber-500 shadow-lg ring-2 ring-amber-400' : 'border-amber-400'}`}>
+                      <div className="absolute -top-3 right-4 bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
+                        Best Value (Save 70%)
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black uppercase text-amber-800">Lifetime Pass</span>
+                          {activePlan === 'lifetime' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-300 text-amber-950">Active VIP</span>
+                          )}
+                        </div>
+                        <div>
+                          <h5 className="text-base font-display font-black text-stone-900">Founder Lifetime</h5>
+                          <p className="text-2xl font-display font-black text-stone-900 mt-1">$39.99 <span className="text-xs font-normal text-stone-500">one-time</span></p>
+                        </div>
+                        <ul className="space-y-1.5 text-xs text-stone-800">
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-amber-700 shrink-0" /> <b>Lifetime access & all future updates</b></li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-amber-700 shrink-0" /> Full 150+ Page Printable Activity Book</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-amber-700 shrink-0" /> VIP Gold Explorer Character Badge</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-amber-700 shrink-0" /> Personalized Completion Certificates</li>
+                          <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-amber-700 shrink-0" /> 30-Day 100% Money-Back Guarantee</li>
+                        </ul>
+                      </div>
+
+                      <button
+                        onClick={() => handleSelectPlan('lifetime')}
+                        className={`w-full mt-4 py-2.5 px-3 rounded-xl text-xs font-display font-black cursor-pointer shadow-md transition-all active:scale-95 ${
+                          activePlan === 'lifetime'
+                            ? 'bg-amber-600 text-white hover:bg-amber-700'
+                            : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white'
+                        }`}
+                      >
+                        {activePlan === 'lifetime' ? '👑 Lifetime VIP Active' : 'Get Lifetime All-Access'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Trust & Guarantee Box */}
+                  <div className="p-3.5 rounded-2xl bg-[#FFFDF7] border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-600">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span><b>Zero-Risk Promise:</b> 100% Money-back guarantee for 30 days. No questions asked.</span>
+                    </div>
+                    <div className="flex items-center gap-3 font-semibold text-stone-700">
+                      <span>✓ Secure SSL 256-Bit</span>
+                      <span>✓ COPPA Certified</span>
+                      <span>✓ No Ads Ever</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- TAB 3: TRUST, SAFETY & COPPA CERTIFICATION --- */}
+              {activeTab === 'trust_safety' && (
+                <div className="space-y-4 animate-in fade-in">
+                  <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
+                    <div className="flex items-center gap-2 text-emerald-900">
+                      <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                      <h4 className="text-sm font-display font-black">Our Child Safety & Privacy Commitment</h4>
+                    </div>
+                    <p className="text-xs text-emerald-800 mt-1">
+                      Wonder Meadow is built from the ground up to be a safe, gentle, and transparent digital garden for young minds.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
+                        🛡️
+                      </div>
+                      <h5 className="text-xs font-display font-black text-stone-900">100% Ad-Free Environment</h5>
+                      <p className="text-xs text-stone-600 leading-relaxed">
+                        We never display banner ads, unskippable videos, sponsored placements, or deceptive in-game purchase traps. Your child's attention is respected.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2">
+                      <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold text-sm">
+                        🔒
+                      </div>
+                      <h5 className="text-xs font-display font-black text-stone-900">COPPA & GDPR-K Compliant</h5>
+                      <p className="text-xs text-stone-600 leading-relaxed">
+                        We do not collect personal identifiers, geolocation, or behavioral ad profiles from children. All progress is tied safely to your parent-managed account.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                        🧠
+                      </div>
+                      <h5 className="text-xs font-display font-black text-stone-900">ECE Educational Framework</h5>
+                      <p className="text-xs text-stone-600 leading-relaxed">
+                        Our mini-games reinforce early childhood literacy, numeracy, rhythm, spatial navigation, and curiosity without over-stimulating bright flashes or high-pressure timers.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2">
+                      <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold text-sm">
+                        👨‍👩‍👧
+                      </div>
+                      <h5 className="text-xs font-display font-black text-stone-900">Gated Parental Controls</h5>
+                      <p className="text-xs text-stone-600 leading-relaxed">
+                        All configuration, audio settings, subscriptions, and profile edits are guarded behind dynamic math gates so only adults can adjust settings.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-xs text-stone-600 space-y-2">
+                    <h6 className="font-bold text-stone-800 flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-stone-600" />
+                      <span>Pedagogical Statement for Educators & Caregivers</span>
+                    </h6>
+                    <p className="leading-relaxed">
+                      Children learn best when they can navigate self-directed environments at their own pace. By placing numbers, phonics, animal calls, and melodies along physical cobblestone roads, Wonder Meadow bridges spatial memory with conceptual learning.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* --- TAB 4: LEARNING ZONES --- */}
               {activeTab === 'learning_zones' && (
                 <div className="space-y-4 animate-in fade-in">
                   <div className="bg-sky-50 border border-sky-200 p-3.5 rounded-2xl">

@@ -3,11 +3,15 @@ import * as THREE from 'three';
 import { WorldZoneId, LetterItem, FruitItem, AnimalItem, NumberItem, ExplorerCharacterId, CharacterGender } from '../../types';
 import { WORLD_ZONES, ALPHABET_DATA } from '../../data/worldZones';
 import { buildWonderMeadowWorld, WorldBuildResult } from './worldBuilder';
+import { GuidedTrailVisualizer, findRoadPath, ZONE_NODE_MAP, ROAD_NODES, findClosestRoadNode, clampPositionToRoadNetwork, PATH_BLOCKAGES, PathBlockageDef } from './pathNetwork';
 import { InWorldDiscoveryModal, InWorldDiscoveryType } from './InWorldDiscoveryModal';
 import { CompactMovementCluster } from './CompactMovementCluster';
 import { AdventureDestinationCard } from '../world/AdventureDestinationCard';
+import { AdventureBagModal } from '../inventory/AdventureBagModal';
+import { getCharacterById } from '../../data/charactersData';
 import { audioService } from '../../utils/audio';
-import { ZoomIn, ZoomOut, Compass, Sparkles, Star } from 'lucide-react';
+import { AuthUser, UserProfile } from '../../utils/api';
+import { ZoomIn, ZoomOut, Compass, Sparkles, Star, Navigation, MapPin, Play, Pause, X, ChevronRight, Volume2, VolumeX, Shield, User, BookOpen, Package, Check, Award } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface MeadowCanvasProps {
@@ -20,6 +24,20 @@ interface MeadowCanvasProps {
   characterId?: ExplorerCharacterId;
   destinationZone?: WorldZoneId | null;
   onEarnStar?: () => void;
+  coins?: number;
+  gems?: number;
+  clovers?: number;
+  stars?: number;
+  onCollectItem?: (type: 'coin' | 'gem' | 'clover' | 'star', value?: number) => void;
+  onOpenCharacterPicker?: () => void;
+  onOpenCaregiver?: () => void;
+  onOpenProfile?: () => void;
+  onOpenLearn?: () => void;
+  onOpenRewards?: () => void;
+  onToggleSound?: () => void;
+  soundEnabled?: boolean;
+  user?: AuthUser | null;
+  profile?: UserProfile | null;
 }
 
 export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
@@ -31,7 +49,21 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
   gender = 'girl',
   characterId = 'curious_explorer',
   destinationZone = null,
-  onEarnStar
+  onEarnStar,
+  coins = 0,
+  gems = 0,
+  clovers = 0,
+  stars = 0,
+  onCollectItem,
+  onOpenCharacterPicker,
+  onOpenCaregiver,
+  onOpenProfile,
+  onOpenLearn,
+  onOpenRewards,
+  onToggleSound,
+  soundEnabled = true,
+  user = null,
+  profile = null
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -44,6 +76,24 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
   const [currentLocationName, setCurrentLocationName] = useState<string>('Central Meadow');
   const [hoveredTargetLabel, setHoveredTargetLabel] = useState<string | null>(null);
   const [starBannerText, setStarBannerText] = useState<string | null>(null);
+  const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
+  const lastCollisionWarnTime = useRef<number>(0);
+
+  // Adventure Bag Inventory State
+  const [isBagOpen, setIsBagOpen] = useState<boolean>(false);
+  const [bagBounceFlash, setBagBounceFlash] = useState<boolean>(false);
+  const [bagLootFruits, setBagLootFruits] = useState<number>(3);
+  const [clearedBlockages, setClearedBlockages] = useState<Record<string, boolean>>({});
+  const [activeBlockagePrompt, setActiveBlockagePrompt] = useState<PathBlockageDef | null>(null);
+  const unclearedBlockagesRef = useRef<Set<string>>(new Set(Object.keys(PATH_BLOCKAGES)));
+
+  // Trail Guidance & Road Auto-Walk State
+  const [guidedZoneId, setGuidedZoneId] = useState<WorldZoneId | null>(destinationZone || 'alphabet');
+  const [isAutoWalkingState, setIsAutoWalkingState] = useState<boolean>(false);
+  const [trailDistance, setTrailDistance] = useState<number>(0);
+  const trailVisualizerRef = useRef<GuidedTrailVisualizer | null>(null);
+  const autoWalkWaypoints = useRef<THREE.Vector3[]>([]);
+  const isAutoWalking = useRef<boolean>(false);
 
   // Track collected item IDs in this session
   const collectedItemIds = useRef<Set<string>>(new Set());
@@ -54,6 +104,11 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
   const explorerAngle = useRef<number>(0);
   const isWalking = useRef<boolean>(false);
   const walkTime = useRef<number>(0);
+
+  const triggerBagBounce = useCallback(() => {
+    setBagBounceFlash(true);
+    setTimeout(() => setBagBounceFlash(false), 800);
+  }, []);
 
   // Camera Exploration State (Spherical tracking following Explorer)
   const cameraDistance = useRef<number>(36);
@@ -89,6 +144,63 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
     }, 3200);
   };
 
+  const triggerCollisionNotice = (obstacleName: string) => {
+    const now = performance.now();
+    if (now - lastCollisionWarnTime.current > 1800) {
+      lastCollisionWarnTime.current = now;
+      audioService.playPop();
+      setCollisionWarning(`Blocked by ${obstacleName}! Follow the paved road!`);
+      setTimeout(() => {
+        setCollisionWarning(null);
+      }, 2200);
+    }
+  };
+
+  // Start guided path along cobblestone road to a target zone
+  const startGuidedTrail = useCallback((targetZId: WorldZoneId, autoWalk = true) => {
+    setGuidedZoneId(targetZId);
+    const targetNodeId = ZONE_NODE_MAP[targetZId];
+    if (!targetNodeId) return;
+
+    const points = findRoadPath(explorerPos.current.x, explorerPos.current.z, targetNodeId);
+    if (trailVisualizerRef.current) {
+      const zInfo = WORLD_ZONES.find(z => z.id === targetZId);
+      trailVisualizerRef.current.setPath(points, zInfo?.name);
+    }
+
+    if (autoWalk) {
+      autoWalkWaypoints.current = [...points];
+      isAutoWalking.current = true;
+      setIsAutoWalkingState(true);
+      audioService.playSparkle();
+      const zInfo = WORLD_ZONES.find(z => z.id === targetZId);
+      showCelebrationToast(`🧭 Walking paved road to ${zInfo?.name || targetZId}!`);
+    }
+  }, []);
+
+  // Stop auto-walk
+  const stopAutoWalk = useCallback(() => {
+    isAutoWalking.current = false;
+    setIsAutoWalkingState(false);
+    autoWalkWaypoints.current = [];
+  }, []);
+
+  // Clear guided trail completely
+  const clearGuidedTrail = useCallback(() => {
+    stopAutoWalk();
+    setGuidedZoneId(null);
+    if (trailVisualizerRef.current) {
+      trailVisualizerRef.current.clear();
+    }
+  }, [stopAutoWalk]);
+
+  // Sync destinationZone prop to guided trail
+  useEffect(() => {
+    if (destinationZone) {
+      startGuidedTrail(destinationZone, false);
+    }
+  }, [destinationZone, startGuidedTrail]);
+
   // Update Explorer Character in 3D scene when characterId or gender prop changes
   useEffect(() => {
     if (worldRef.current) {
@@ -108,12 +220,13 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       if (targetPos) {
         explorerPos.current.copy(targetPos);
         targetWalkPos.current = null;
+        stopAutoWalk();
         cameraDistance.current = 24;
       }
     } else {
       cameraDistance.current = 36;
     }
-  }, [activeZone]);
+  }, [activeZone, stopAutoWalk]);
 
   // Keyboard Event Handlers
   useEffect(() => {
@@ -121,6 +234,11 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       keysPressed.current[e.key.toLowerCase()] = true;
       keysPressed.current[e.code] = true;
+      // User manual input yields auto-walk
+      if (isAutoWalking.current) {
+        isAutoWalking.current = false;
+        setIsAutoWalkingState(false);
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -145,7 +263,11 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
     worldRef.current = world;
     sceneRef.current = world.scene;
 
-    // 2. Click-to-Move Ripple Mesh
+    // 2. Initialize 3D Guided Trail Ribbon Visualizer
+    const trailVis = new GuidedTrailVisualizer(world.scene);
+    trailVisualizerRef.current = trailVis;
+
+    // 3. Click-to-Move Ripple Mesh
     const ripGeo = new THREE.RingGeometry(0.2, 0.8, 24);
     ripGeo.rotateX(-Math.PI / 2);
     const ripMat = new THREE.MeshBasicMaterial({ color: '#38BDF8', transparent: true, opacity: 0, side: THREE.DoubleSide });
@@ -154,7 +276,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
     world.scene.add(ripMesh);
     rippleMeshRef.current = ripMesh;
 
-    // 3. Perspective Camera
+    // 4. Perspective Camera
     const camera = new THREE.PerspectiveCamera(
       48,
       containerRef.current.clientWidth / containerRef.current.clientHeight,
@@ -163,7 +285,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
     );
     cameraRef.current = camera;
 
-    // 4. WebGL Renderer
+    // 5. WebGL Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -195,7 +317,15 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       world.setExplorerGender(gender as 'girl' | 'boy');
     }
 
-    // 5. Game Animation & Physics Loop
+    // Default Trail Initializer
+    const initTarget = destinationZone || 'alphabet';
+    const initNode = ZONE_NODE_MAP[initTarget];
+    if (initNode) {
+      const pts = findRoadPath(0, 8, initNode);
+      trailVis.setPath(pts);
+    }
+
+    // 6. Game Animation & Physics Loop
     let lastTime = performance.now();
 
     const animate = (time: number) => {
@@ -204,7 +334,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       const delta = Math.min((time - lastTime) / 1000, 0.1);
       lastTime = time;
 
-      // Update ambient animations in world (windmills, clouds, floating letters, butterflies)
+      // Update ambient animations in world
       if (world.animatedElements) {
         const anim = world.animatedElements;
         // Clouds drift
@@ -239,7 +369,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
           anim.observatoryDome.rotation.y += delta * 0.1;
         }
 
-        // Hidden Stars twinkling and check collection proximity
+        // Hidden Stars
         anim.hiddenStars.forEach(s => {
           s.mesh.rotation.y += delta * 1.5;
 
@@ -252,13 +382,68 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
               if (onEarnStar) {
                 onEarnStar();
               }
+              if (onCollectItem) {
+                onCollectItem('star', 1);
+              }
               showCelebrationToast('⭐ +1 Wonder Star! You found a secret meadow star!');
             }
           }
         });
+
+        // 3D Collectibles loop (Finely scaled coins, sweet berries, gems, clovers)
+        if (anim.collectibles) {
+          const cTime = performance.now() * 0.003;
+          anim.collectibles.forEach(c => {
+            if (c.collected || collectedItemIds.current.has(c.id)) {
+              c.mesh.visible = false;
+              return;
+            }
+
+            c.mesh.rotation.y += delta * 2.5;
+            c.mesh.position.y = c.initialY + Math.sin(cTime * 2 + (c.value || 1)) * 0.12;
+
+            const cDist = Math.hypot(c.mesh.position.x - explorerPos.current.x, c.mesh.position.z - explorerPos.current.z);
+            if (cDist < 2.0) {
+              c.collected = true;
+              collectedItemIds.current.add(c.id);
+              c.mesh.visible = false;
+
+              triggerBagBounce();
+              audioService.playPop();
+
+              if (onCollectItem) {
+                onCollectItem(c.type as any, c.value || 1);
+              }
+
+              if (c.type === 'coin') {
+                showCelebrationToast(`🪙 +${c.value || 1} Meadow Gold Coin! (Added to Bag)`);
+              } else if (c.type === 'gem') {
+                showCelebrationToast(`💎 +${c.value || 5} Sparkly Gem Crystal!`);
+              } else if (c.type === 'clover') {
+                showCelebrationToast(`🍀 +${c.value || 3} Lucky Four-Leaf Clover!`);
+              } else if (c.type === 'fruit') {
+                setBagLootFruits(prev => prev + 1);
+                showCelebrationToast(`🍓 +1 Sweet Meadow Berry! (Packed in Bag)`);
+              }
+            }
+          });
+        }
+
+        // 3D Road Blockages animation loop (Bunny, Magic Log, Ducklings, Star Gate)
+        if (anim.roadBlockages) {
+          const elapsedSec = performance.now() * 0.001;
+          anim.roadBlockages.forEach(b => {
+            b.updateAnimation(elapsedSec, !!clearedBlockages[b.id]);
+          });
+        }
       }
 
-      // Animate Click Ripple if active
+      // Update 3D Guided Trail Visualizer
+      if (trailVisualizerRef.current) {
+        trailVisualizerRef.current.update(delta);
+      }
+
+      // Animate Click Ripple
       if (rippleAnimTime.current > 0 && rippleMeshRef.current) {
         rippleAnimTime.current -= delta * 2;
         const op = Math.max(0, rippleAnimTime.current);
@@ -267,18 +452,20 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         rippleMeshRef.current.scale.set(sc, sc, sc);
       }
 
-      // Physics: Calculate Character Movement Direction
+      // Movement Calculations
       const moveVec = new THREE.Vector3(0, 0, 0);
 
-      // Joystick / D-pad input
+      // 1. Manual Joystick input
       if (Math.abs(joystickVector.current.x) > 0.05 || Math.abs(joystickVector.current.z) > 0.05) {
+        isAutoWalking.current = false;
+        setIsAutoWalkingState(false);
         const forward = new THREE.Vector3(-Math.sin(cameraAzimuth.current), 0, -Math.cos(cameraAzimuth.current));
         const right = new THREE.Vector3(Math.cos(cameraAzimuth.current), 0, -Math.sin(cameraAzimuth.current));
         moveVec.add(forward.multiplyScalar(-joystickVector.current.z));
         moveVec.add(right.multiplyScalar(joystickVector.current.x));
       }
 
-      // Keyboard input (WASD / Arrows)
+      // 2. Keyboard input (WASD / Arrows)
       const forwardDir = new THREE.Vector3(-Math.sin(cameraAzimuth.current), 0, -Math.cos(cameraAzimuth.current)).normalize();
       const rightDir = new THREE.Vector3(Math.cos(cameraAzimuth.current), 0, -Math.sin(cameraAzimuth.current)).normalize();
 
@@ -295,28 +482,58 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         moveVec.sub(rightDir);
       }
 
-      const speed = 12.0; // Units per second
+      const speed = 12.5; // Walking speed
 
-      // If moving via keys/joystick, cancel click-to-move target
+      let nextX = explorerPos.current.x;
+      let nextZ = explorerPos.current.z;
+
       if (moveVec.lengthSq() > 0.01) {
+        // Manual Movement active
         targetWalkPos.current = null;
         moveVec.normalize();
-        explorerPos.current.x += moveVec.x * speed * delta;
-        explorerPos.current.z += moveVec.z * speed * delta;
+        nextX += moveVec.x * speed * delta;
+        nextZ += moveVec.z * speed * delta;
 
-        // Target angle face direction of movement
         explorerAngle.current = Math.atan2(moveVec.x, moveVec.z);
         isWalking.current = true;
+      } else if (isAutoWalking.current && autoWalkWaypoints.current.length > 0) {
+        // =================================================================
+        // AUTO-FOLLOW PAVED ROAD WAYPOINT ROUTE (GAME-STYLE TRAIL NAVIGATION)
+        // =================================================================
+        const nextWp = autoWalkWaypoints.current[0];
+        const toWp = new THREE.Vector3(nextWp.x - explorerPos.current.x, 0, nextWp.z - explorerPos.current.z);
+        const distToWp = toWp.length();
+
+        if (distToWp > 0.9) {
+          toWp.normalize();
+          nextX += toWp.x * speed * delta;
+          nextZ += toWp.z * speed * delta;
+          explorerAngle.current = Math.atan2(toWp.x, toWp.z);
+          isWalking.current = true;
+        } else {
+          // Reached current waypoint, pop next
+          autoWalkWaypoints.current.shift();
+          if (autoWalkWaypoints.current.length === 0) {
+            // Reached Destination!
+            isAutoWalking.current = false;
+            setIsAutoWalkingState(false);
+            isWalking.current = false;
+            audioService.playSparkle();
+            showCelebrationToast(`🎉 You have arrived at your destination!`);
+          } else {
+            isWalking.current = true;
+          }
+        }
       } else if (targetWalkPos.current) {
-        // Move toward click-to-move point
+        // Direct click-to-move
         const toTarget = new THREE.Vector3().subVectors(targetWalkPos.current, explorerPos.current);
         toTarget.y = 0;
         const dist = toTarget.length();
 
         if (dist > 0.4) {
           toTarget.normalize();
-          explorerPos.current.x += toTarget.x * speed * delta;
-          explorerPos.current.z += toTarget.z * speed * delta;
+          nextX += toTarget.x * speed * delta;
+          nextZ += toTarget.z * speed * delta;
           explorerAngle.current = Math.atan2(toTarget.x, toTarget.z);
           isWalking.current = true;
         } else {
@@ -327,7 +544,32 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         isWalking.current = false;
       }
 
-      // Constrain Explorer position to world boundary
+      // =====================================================================
+      // STRICT ROAD NETWORK CONSTRAINT & PATH BLOCKAGE HANDLING
+      // (Character walks/runs ONLY along paved paths, bridges, plaza & courtyards)
+      // =====================================================================
+      if (isWalking.current) {
+        const roadClamped = clampPositionToRoadNetwork(nextX, nextZ, unclearedBlockagesRef.current);
+        nextX = roadClamped.x;
+        nextZ = roadClamped.z;
+
+        if (roadClamped.isBlocked && roadClamped.blockageId) {
+          const bDef = PATH_BLOCKAGES[roadClamped.blockageId];
+          if (bDef && !clearedBlockages[bDef.id]) {
+            setActiveBlockagePrompt(bDef);
+            if (targetWalkPos.current) targetWalkPos.current = null;
+            if (isAutoWalking.current) {
+              isAutoWalking.current = false;
+              setIsAutoWalkingState(false);
+            }
+          }
+        }
+
+        explorerPos.current.x = nextX;
+        explorerPos.current.z = nextZ;
+      }
+
+      // Meadow Boundary limit
       const boundaryRadius = 78;
       const curDist = Math.hypot(explorerPos.current.x, explorerPos.current.z);
       if (curDist > boundaryRadius) {
@@ -336,49 +578,33 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         explorerPos.current.z = Math.sin(ang) * boundaryRadius;
       }
 
-      // Update 3D Explorer Mesh Position & Walking Animation
+      // Update 3D Character Mesh & Articulated Rig
       if (world.explorerMesh) {
         world.explorerMesh.position.x = explorerPos.current.x;
         world.explorerMesh.position.z = explorerPos.current.z;
 
-        // Smooth rotation interpolation
         world.explorerMesh.rotation.y = THREE.MathUtils.lerp(
           world.explorerMesh.rotation.y,
           explorerAngle.current,
           0.15
         );
 
-        // Character articulated animation controls
         const ctrl = world.childCharacterController;
         const now = performance.now();
 
         if (isWalking.current) {
           walkTime.current += delta * 12;
-          // Bobbing torso
           world.explorerMesh.position.y = 0.2 + Math.abs(Math.sin(walkTime.current * 2)) * 0.16;
 
-          // Leg swing
           if (ctrl?.leftLeg && ctrl?.rightLeg) {
             ctrl.leftLeg.rotation.x = Math.sin(walkTime.current) * 0.55;
             ctrl.rightLeg.rotation.x = -Math.sin(walkTime.current) * 0.55;
           }
-          // Arm swing
           if (ctrl?.leftArm && ctrl?.rightArm) {
             ctrl.leftArm.rotation.x = -Math.sin(walkTime.current) * 0.45;
             ctrl.rightArm.rotation.x = Math.sin(walkTime.current) * 0.45;
           }
-          // Wings flutter
-          if (ctrl?.wings) {
-            ctrl.wings.rotation.y = Math.sin(walkTime.current * 4) * 0.35;
-          }
-          if (ctrl?.ears && Array.isArray(ctrl.ears)) {
-            const earTilt = -0.15 + Math.sin(walkTime.current * 2) * 0.18;
-            ctrl.ears.forEach(ear => {
-              ear.rotation.x = earTilt;
-            });
-          }
         } else {
-          // Smooth return to relaxed stance
           world.explorerMesh.position.y = 0.2 + Math.sin(now * 0.003) * 0.04;
           if (ctrl?.leftLeg && ctrl?.rightLeg) {
             ctrl.leftLeg.rotation.x = THREE.MathUtils.lerp(ctrl.leftLeg.rotation.x, 0, 0.1);
@@ -388,19 +614,10 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
             ctrl.leftArm.rotation.x = THREE.MathUtils.lerp(ctrl.leftArm.rotation.x, 0, 0.1);
             ctrl.rightArm.rotation.x = THREE.MathUtils.lerp(ctrl.rightArm.rotation.x, 0, 0.1);
           }
-          if (ctrl?.wings) {
-            ctrl.wings.rotation.y = Math.sin(now * 0.004) * 0.12;
-          }
-          if (ctrl?.ears && Array.isArray(ctrl.ears)) {
-            const earSway = Math.sin(now * 0.0025) * 0.06;
-            ctrl.ears.forEach(ear => {
-              ear.rotation.x = earSway;
-            });
-          }
         }
       }
 
-      // Update Camera tracking Explorer Position
+      // Camera Tracking
       if (cameraRef.current) {
         const camX = explorerPos.current.x + cameraDistance.current * Math.sin(cameraPolar.current) * Math.sin(cameraAzimuth.current);
         const camY = explorerPos.current.y + cameraDistance.current * Math.cos(cameraPolar.current);
@@ -410,7 +627,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         cameraRef.current.lookAt(explorerPos.current.x, explorerPos.current.y + 1.2, explorerPos.current.z);
       }
 
-      // Check Nearest Zone for Location HUD
+      // Location detection
       let closestZone: string = 'Central Meadow';
       let minZoneDist = 28;
 
@@ -425,7 +642,15 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
 
       setCurrentLocationName(closestZone);
 
-      // Render Scene
+      // Update distance to guided zone
+      if (guidedZoneId) {
+        const anchor = world.zoneAnchors.get(guidedZoneId);
+        if (anchor) {
+          const dist = Math.round(Math.hypot(anchor.x - explorerPos.current.x, anchor.z - explorerPos.current.z));
+          setTrailDistance(dist);
+        }
+      }
+
       renderer.render(world.scene, camera);
     };
 
@@ -436,7 +661,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       resizeObserver.disconnect();
       renderer.dispose();
     };
-  }, [characterId, gender, onEarnStar]);
+  }, [characterId, gender, onEarnStar, destinationZone, guidedZoneId]);
 
   // Pointer Handlers for Orbit Drag & Click to Move
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -459,7 +684,6 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       }
     }
 
-    // Raycast hover label over interactive items
     if (containerRef.current && cameraRef.current && worldRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -492,7 +716,6 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
   const handlePointerUp = (e: React.PointerEvent) => {
     isPointerDragging.current = false;
 
-    // If it was a quick click/tap (not a drag)
     if (!hasDragged.current && containerRef.current && cameraRef.current && worldRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -500,7 +723,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
 
       raycaster.current.setFromCamera(mouse.current, cameraRef.current);
 
-      // 1. Check interactive landmarks / objects first
+      // 1. Check interactive landmarks
       const interactiveHits = raycaster.current.intersectObjects(Array.from(worldRef.current.interactiveMap.keys()), true);
 
       if (interactiveHits.length > 0) {
@@ -549,7 +772,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
               setActiveDiscovery({
                 type: 'guide',
                 title: 'Barnaby Bunny',
-                message: 'Welcome to Wonder Meadow! Follow the winding flower paths to explore Alphabet Grove, Number Valley, Fruit Orchard, and Animal Woods!'
+                message: 'Welcome to Wonder Meadow! Follow the paved cobblestone roads to explore Alphabet Grove, Number Valley, Fruit Orchard, and Animal Woods!'
               });
             } else if (target.type === 'xylophone_key') {
               const kData = target.data as { noteIndex: number };
@@ -603,18 +826,27 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
                 });
               }
             } else if (target.type === 'zone') {
-              onSelectZone(target.id as WorldZoneId);
+              // Clicked on a zone landmark: guide along path there!
+              startGuidedTrail(target.id as WorldZoneId, true);
             }
             return;
           }
         }
       }
 
-      // 2. Otherwise Clicked on Ground -> Move Explorer There!
+      // 2. Clicked Ground: Smart Path Finding along road
       const sceneHits = raycaster.current.intersectObjects(worldRef.current.scene.children, true);
       if (sceneHits.length > 0) {
         const pt = sceneHits[0].point;
-        targetWalkPos.current = new THREE.Vector3(pt.x, 0.2, pt.z);
+        const closestNodeId = findClosestRoadNode(pt.x, pt.z);
+        const roadRoute = findRoadPath(explorerPos.current.x, explorerPos.current.z, closestNodeId);
+
+        // Append final click point
+        roadRoute.push(new THREE.Vector3(pt.x, 0.2, pt.z));
+
+        autoWalkWaypoints.current = roadRoute;
+        isAutoWalking.current = true;
+        setIsAutoWalkingState(true);
 
         if (rippleMeshRef.current) {
           rippleMeshRef.current.position.set(pt.x, 0.22, pt.z);
@@ -625,7 +857,6 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
     }
   };
 
-  // Next / Previous letter station cycling in Alphabet Grove modal
   const handleNextStation = () => {
     if (activeDiscovery && activeDiscovery.type === 'letter') {
       const nextIdx = (activeDiscovery.index + 1) % ALPHABET_DATA.length;
@@ -650,13 +881,38 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
     }
   };
 
-  // Instant Stop Action for Character Movement (#5)
   const handleStopMovement = useCallback(() => {
     joystickVector.current = { x: 0, z: 0 };
     targetWalkPos.current = null;
     keysPressed.current = {};
     isWalking.current = false;
-  }, []);
+    stopAutoWalk();
+  }, [stopAutoWalk]);
+
+  const activeGuidedZone = WORLD_ZONES.find(z => z.id === guidedZoneId);
+  const currentCharacter = getCharacterById(characterId);
+
+  const handleClearBlockage = (blockage: PathBlockageDef) => {
+    setClearedBlockages(prev => ({ ...prev, [blockage.id]: true }));
+    unclearedBlockagesRef.current.delete(blockage.id);
+    setActiveBlockagePrompt(null);
+
+    confetti({
+      particleCount: 50,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+    audioService.playSparkle();
+
+    if (onEarnStar) {
+      onEarnStar();
+    }
+    if (onCollectItem) {
+      onCollectItem('coin', 5);
+      onCollectItem('star', 1);
+    }
+    showCelebrationToast(`🎉 ${blockage.unlockNotice} (+1 Star & +5 Coins)`);
+  };
 
   return (
     <div className="relative w-full h-full overflow-hidden select-none bg-[#BAE6FD]">
@@ -669,98 +925,205 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
       />
 
-      {/* 1. Top-Left Clean Location HUD */}
-      <div className="absolute top-3 left-3 md:top-4 md:left-4 z-10 pointer-events-none flex flex-col gap-2">
-        <div className="flex items-center gap-2.5 bg-[#FFFDF7]/95 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-amber-300 shadow-sm">
-          <div className="w-6 h-6 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-2xs">
-            <Compass className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <span className="text-[9px] uppercase tracking-wider font-extrabold text-stone-500 block leading-none">
-              Location
+      {/* =========================================================================
+          UNIFIED CALM TOP FLOATING CAPSULE (No Clutter, High Contrast, Toddler-Friendly)
+          ========================================================================= */}
+      <header
+        id="meadow-top-floating-bar"
+        className="absolute top-3 left-3 right-3 md:top-4 md:left-6 md:right-6 z-20 pointer-events-auto flex items-center justify-between gap-2"
+      >
+        {/* Left: Friend Picker & Adventure Bag & Coins */}
+        <div className="flex items-center gap-2">
+          {/* Exact Character Friend Picker Pill */}
+          {onOpenCharacterPicker && (
+            <button
+              onClick={() => {
+                audioService.playPop();
+                onOpenCharacterPicker();
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FFFDF7]/95 hover:bg-amber-100 text-stone-900 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md"
+              title={`Playing as ${currentCharacter.name} (Click to switch character)`}
+              aria-label="Change Explorer Character"
+            >
+              <span className="text-base">{currentCharacter.badgeEmoji}</span>
+              <span className="capitalize font-black hidden sm:inline">{currentCharacter.name}</span>
+            </button>
+          )}
+
+          {/* Interactive Adventure Bag Button (Pouch of collectibles) */}
+          <button
+            onClick={() => {
+              audioService.playPop();
+              setIsBagOpen(true);
+            }}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FFFDF7]/95 hover:bg-amber-50 text-stone-900 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md ${
+              bagBounceFlash ? 'animate-bounce ring-4 ring-amber-400 bg-amber-100 scale-105' : ''
+            }`}
+            title="Open Adventure Bag (View collected coins, gems, clovers, fruits & blockage badges)"
+            aria-label="Open Adventure Backpack"
+          >
+            <span className="text-base">🎒</span>
+            <span className="hidden sm:inline">Bag</span>
+            <span className="bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded-full text-[10px] md:text-xs">
+              {coins + gems + clovers + stars + bagLootFruits}
             </span>
-            <span className="text-xs md:text-sm font-display font-black text-stone-800 leading-tight">
-              {currentLocationName}
-            </span>
+          </button>
+
+          {/* Collectibles Pouch Tracker: Coins & Stars */}
+          <div
+            className="flex items-center gap-2 bg-[#FFFDF7]/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border-2 border-amber-300 shadow-md text-xs md:text-sm font-display font-black text-stone-900"
+            title="Collected Coins and Wonder Stars"
+          >
+            <div className="flex items-center gap-1 text-amber-900">
+              <span className="text-base">🪙</span>
+              <span>{coins}</span>
+            </div>
+            <span className="text-stone-300">•</span>
+            <div className="flex items-center gap-1 text-purple-900">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+              <span>{stars}</span>
+            </div>
           </div>
         </div>
 
-        {/* Hover Target Preview Tag */}
-        {hoveredTargetLabel && (
-          <div className="bg-sky-600 text-white text-xs font-black px-3 py-1.5 rounded-xl shadow-md border border-white flex items-center gap-1.5 animate-bounce">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{hoveredTargetLabel}</span>
-          </div>
-        )}
-      </div>
+        {/* Center: Big Cheerful "🌟 Learn & Play" & "🚶 Walk Road" Buttons */}
+        <div className="flex items-center gap-2">
+          {onOpenLearn && (
+            <button
+              onClick={() => {
+                audioService.playSparkle();
+                onOpenLearn();
+              }}
+              className="flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 rounded-2xl md:rounded-3xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-stone-950 font-display font-black text-xs md:text-sm border-2 border-amber-300 shadow-lg cursor-pointer active:scale-95 transition-all animate-pulse"
+              title="Open Learning Adventures Hub (Phonics, Numbers, Animals, Music, Stories)"
+            >
+              <Sparkles className="w-4 h-4 text-stone-950 fill-stone-950" />
+              <span>✨ Play & Learn</span>
+            </button>
+          )}
 
-      {/* Real-time Wonder Star Reward Celebration Toast */}
+          {/* Quick 1-Tap Walk Next Station */}
+          <button
+            onClick={() => {
+              if (isAutoWalkingState) {
+                stopAutoWalk();
+              } else {
+                startGuidedTrail(guidedZoneId || 'alphabet', true);
+              }
+            }}
+            className={`hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border-2 font-display font-black text-xs md:text-sm cursor-pointer shadow-md active:scale-95 transition-all backdrop-blur-md ${
+              isAutoWalkingState
+                ? 'bg-amber-500 text-white border-amber-600'
+                : 'bg-[#FFFDF7]/95 hover:bg-emerald-50 text-emerald-900 border-emerald-300'
+            }`}
+            title="Follow the road to the next learning station"
+          >
+            {isAutoWalkingState ? (
+              <>
+                <Pause className="w-4 h-4 fill-white" />
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-emerald-700 text-emerald-700" />
+                <span>🚶 Walk Road</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Right: Sound, Map & Parents Gate */}
+        <div className="flex items-center gap-1.5 md:gap-2">
+          {/* Sound Toggle */}
+          {onToggleSound && (
+            <button
+              onClick={() => {
+                audioService.playPop();
+                onToggleSound();
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl border-2 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md ${
+                soundEnabled !== false
+                  ? 'bg-[#FFFDF7]/95 hover:bg-white text-sky-800 border-sky-300'
+                  : 'bg-rose-50/95 hover:bg-rose-100 text-rose-700 border-rose-300'
+              }`}
+              title={soundEnabled !== false ? 'Sound is ON (Click to mute)' : 'Sound is OFF (Click to unmute)'}
+            >
+              {soundEnabled !== false ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              <span className="hidden sm:inline">{soundEnabled !== false ? 'Sound' : 'Muted'}</span>
+            </button>
+          )}
+
+          {/* Map Button */}
+          {onOpenMap && (
+            <button
+              onClick={() => {
+                audioService.playPop();
+                onOpenMap();
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-[#FFFDF7]/95 hover:bg-white text-stone-800 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md"
+              title="Open 3D World Map"
+            >
+              <Compass className="w-4 h-4 text-emerald-600" />
+              <span className="hidden md:inline">Map</span>
+            </button>
+          )}
+
+          {/* Parents & Family Pass Button (Protected by Math Gate) */}
+          {onOpenCaregiver && (
+            <button
+              onClick={() => {
+                audioService.playPop();
+                onOpenCaregiver();
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-gradient-to-r from-amber-100 to-yellow-100 hover:from-amber-200 hover:to-yellow-200 text-amber-950 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md"
+              title="Parents & Caregivers: Progress, Pedagogy & Family Pass"
+            >
+              <Shield className="w-4 h-4 text-amber-700" />
+              <span className="hidden sm:inline">Parents</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Real-time Reward Celebration Toast */}
       {starBannerText && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in zoom-in-95 fade-in slide-in-from-top-4">
-          <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-stone-900 font-display font-black px-5 py-2.5 rounded-full shadow-2xl border-2 border-white flex items-center gap-2 text-xs sm:text-sm">
-            <Star className="w-4 h-4 fill-stone-900 text-stone-900 animate-spin" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in zoom-in-95 fade-in slide-in-from-top-4">
+          <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-stone-950 font-display font-black px-6 py-3 rounded-full shadow-2xl border-2 border-white flex items-center gap-2.5 text-sm md:text-base">
+            <Star className="w-5 h-5 fill-stone-950 text-stone-950 animate-spin" />
             <span>{starBannerText}</span>
           </div>
         </div>
       )}
 
-      {/* 2. Top-Right Zoom Controls */}
-      <div className="absolute top-3 right-3 md:top-4 md:right-4 z-10 flex flex-col gap-1.5 pointer-events-auto">
-        <button
-          onClick={() => {
-            cameraDistance.current = Math.max(16, cameraDistance.current - 6);
-            audioService.playPop();
-          }}
-          className="w-9 h-9 rounded-2xl bg-[#FFFDF7]/95 hover:bg-white text-stone-700 flex items-center justify-center border border-amber-300 shadow-sm cursor-pointer active:scale-95 transition-transform"
-          title="Zoom In"
-          aria-label="Zoom In"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-
-        <button
-          onClick={() => {
-            cameraDistance.current = Math.min(65, cameraDistance.current + 6);
-            audioService.playPop();
-          }}
-          className="w-9 h-9 rounded-2xl bg-[#FFFDF7]/95 hover:bg-white text-stone-700 flex items-center justify-center border border-amber-300 shadow-sm cursor-pointer active:scale-95 transition-transform"
-          title="Zoom Out"
-          aria-label="Zoom Out"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* 3. Bottom-Left Movement Controls & STOP Button (#5) */}
+      {/* Bottom-Left Toddler Movement Controls */}
       <CompactMovementCluster
         onMove={(dir) => {
           joystickVector.current = dir;
-        }}
-        onRotate={(deltaYaw) => {
-          cameraAzimuth.current += deltaYaw;
-          audioService.playPop();
         }}
         onReset={() => {
           explorerPos.current.set(0, 0.2, 8);
           targetWalkPos.current = null;
           cameraAzimuth.current = 0;
           cameraDistance.current = 36;
+          stopAutoWalk();
           audioService.playSparkle();
         }}
         onStop={handleStopMovement}
         reducedMotion={reducedMotion}
       />
 
-      {/* 4. Bottom-Right Adventure Destination Card (#6) */}
+      {/* Bottom-Right Clean Adventure Destination Card */}
       {!activeZone && (
         <AdventureDestinationCard
-          destinationZoneId={destinationZone}
-          onExploreZone={onSelectZone}
+          destinationZoneId={guidedZoneId || destinationZone}
+          onExploreZone={(zId) => {
+            startGuidedTrail(zId, true);
+          }}
           onOpenMap={() => onOpenMap && onOpenMap()}
         />
       )}
 
-      {/* 5. In-World Interactive Discovery Modal */}
+      {/* In-World Interactive Discovery Modal */}
       <InWorldDiscoveryModal
         discovery={activeDiscovery}
         onClose={() => setActiveDiscovery(null)}
@@ -768,7 +1131,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
           if (onEarnStar) {
             onEarnStar();
           }
-          showCelebrationToast('⭐ +1 Wonder Star! You solved the challenge!');
+          showCelebrationToast('⭐ +1 Wonder Star! You explored a learning station!');
         }}
         onOpenZoneView={(zoneId) => {
           setActiveDiscovery(null);
@@ -777,6 +1140,61 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         onNextStation={handleNextStation}
         onPrevStation={handlePrevStation}
       />
+
+      {/* Road Blockage Interactive Clearance Modal */}
+      {activeBlockagePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in zoom-in-95">
+          <div className="w-full max-w-md bg-[#FFFDF7] rounded-3xl p-6 shadow-2xl border-4 border-amber-300 flex flex-col items-center text-center relative">
+            <button
+              onClick={() => setActiveBlockagePrompt(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-20 h-20 rounded-full bg-amber-100 border-3 border-amber-300 flex items-center justify-center text-4xl shadow-inner mb-4 animate-bounce">
+              {activeBlockagePrompt.icon}
+            </div>
+
+            <h3 className="text-xl font-display font-black text-stone-900 mb-1">
+              {activeBlockagePrompt.name}
+            </h3>
+
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-3">
+              Road Blockage • Friendly Helper Needed!
+            </p>
+
+            <p className="text-stone-700 text-sm md:text-base leading-relaxed mb-6 bg-amber-50/60 p-4 rounded-2xl border border-amber-200">
+              {activeBlockagePrompt.prompt}
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() => handleClearBlockage(activeBlockagePrompt)}
+                className="flex-1 py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-stone-950 font-display font-black text-base border-2 border-emerald-300 shadow-md cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <span>{activeBlockagePrompt.actionLabel}</span>
+                <Sparkles className="w-4 h-4 fill-stone-950" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adventure Bag Backpack Modal */}
+      <AdventureBagModal
+        isOpen={isBagOpen}
+        onClose={() => setIsBagOpen(false)}
+        coins={coins}
+        gems={gems}
+        clovers={clovers}
+        stars={stars}
+        fruitsCount={bagLootFruits}
+        clearedBlockages={clearedBlockages}
+        characterId={characterId}
+      />
     </div>
   );
 };
+

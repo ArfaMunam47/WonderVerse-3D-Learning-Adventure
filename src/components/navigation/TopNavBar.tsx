@@ -29,6 +29,9 @@ interface TopNavBarProps {
   onOpenCharacterPicker: () => void;
   characterId?: ExplorerCharacterId;
   stars: number;
+  coins?: number;
+  gems?: number;
+  clovers?: number;
   accessibility: AccessibilitySettings;
   onToggleSound: () => void;
   user: AuthUser | null;
@@ -47,6 +50,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onOpenCharacterPicker,
   characterId = 'curious_explorer',
   stars,
+  coins = 0,
+  gems = 0,
+  clovers = 0,
   accessibility,
   onToggleSound,
   user,
@@ -179,18 +185,32 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <span>Learn</span>
         </button>
 
-        {/* ⭐ Rewards */}
+        {/* ⭐ Rewards & Collectibles Pouch */}
         <button
           id="btn-nav-rewards"
           onClick={() => {
             audioService.playPop();
             onOpenRewards();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 font-display font-black text-xs md:text-sm shadow-2xs active:scale-95 transition-all cursor-pointer"
-          title="Stars and Badges"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 text-amber-950 border border-amber-300 font-display font-black text-xs md:text-sm shadow-2xs active:scale-95 transition-all cursor-pointer"
+          title="Stars, Coins & Gem Rewards"
         >
-          <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
-          <span>{stars} Stars</span>
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+            <span>{stars}</span>
+          </div>
+          {coins > 0 && (
+            <div className="hidden sm:flex items-center gap-0.5 text-stone-700 font-extrabold text-xs">
+              <span>🪙</span>
+              <span>{coins}</span>
+            </div>
+          )}
+          {gems > 0 && (
+            <div className="hidden md:flex items-center gap-0.5 text-purple-800 font-extrabold text-xs">
+              <span>💎</span>
+              <span>{gems}</span>
+            </div>
+          )}
         </button>
       </nav>
 

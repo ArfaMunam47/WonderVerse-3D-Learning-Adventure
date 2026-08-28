@@ -112,18 +112,18 @@ export const EXPLORER_CHARACTERS: ExplorerCharacter[] = [
   {
     id: 'forest_fawn',
     name: 'Lumi',
-    title: 'Playful',
-    tagline: 'Magical meadow creature with glowing leaf-patterned ears.',
-    personality: 'Gentle, cuddly, playful, and spreads joy wherever they bounce.',
-    badge: '✨',
-    avatarEmoji: '🦊',
-    themeColor: '#A855F7', // Soft Lavender Sprite
+    title: 'Explorer',
+    tagline: 'Cheerful little adventurer in a warm purple hoodie and yellow sneakers.',
+    personality: 'Energetic, friendly, curious, and loves exploring sunny trails with friends.',
+    badge: '⭐',
+    avatarEmoji: '🧒',
+    themeColor: '#9333EA', // Purple Violet
     secondaryColor: '#FAF5FF',
-    accentColor: '#34D399',
-    outfitDescription: 'Fluffy lavender coat, glowing leaf ears, teal bandana, and chestnut leaf satchel.',
-    favoriteActivity: 'Frolicking in Animal Woods & listening with glowing ears.',
-    voiceGreeting: 'Tiptoe and cheer! I am Lumi! Let’s hop and play across the meadow!',
-    genderStyle: 'creature'
+    accentColor: '#FACC15',
+    outfitDescription: 'Purple adventure hoodie with star badge, rolled-up khaki shorts, yellow sneakers, and teal backpack.',
+    favoriteActivity: 'Finding secret gold coins and exploring sunny nature trails.',
+    voiceGreeting: 'Hi friend! I am Lumi! Let’s explore Wonder Meadow together!',
+    genderStyle: 'neutral'
   },
   {
     id: 'little_inventor',

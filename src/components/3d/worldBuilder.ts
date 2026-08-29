@@ -22,7 +22,7 @@ export interface WorldObstacle {
 
 export interface WorldCollectible {
   id: string;
-  type: 'coin' | 'gem' | 'clover' | 'star';
+  type: 'coin' | 'gem' | 'clover' | 'star' | 'fruit';
   mesh: THREE.Group;
   initialY: number;
   collected: boolean;
@@ -59,6 +59,7 @@ export interface WorldBuildResult {
     chimingKeys: { mesh: THREE.Mesh; noteIndex: number }[];
     hiddenStars: { mesh: THREE.Group; id: string; collected: boolean }[];
     collectibles: WorldCollectible[];
+    roadBlockages?: { id: string; updateAnimation: (t: number, cleared: boolean) => void }[];
     startGatePinwheels?: THREE.Group[];
     startGateBell?: THREE.Group | null;
     startGateBalloons?: THREE.Group[];
@@ -1316,9 +1317,9 @@ export function buildWonderMeadowWorld(): WorldBuildResult {
   startGateGroup.add(pillarLeft, pillarRight);
 
   // 3. Overhead Curved Rainbow Arch
-  const rainbowColors = ['#F43F5E', '#FB923C', '#FACC15', '#4ADE80', '#38BDF8', '#A855F7'];
+  const startGateRainbowColors = ['#F43F5E', '#FB923C', '#FACC15', '#4ADE80', '#38BDF8', '#A855F7'];
   const archSpanR = 3.3;
-  rainbowColors.forEach((col, idx) => {
+  startGateRainbowColors.forEach((col, idx) => {
     const r = archSpanR + idx * 0.14;
     const arcGeo = new THREE.TorusGeometry(r, 0.08, 8, 24, Math.PI);
     const arcMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.3 });

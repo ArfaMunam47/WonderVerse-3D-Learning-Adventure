@@ -13,6 +13,16 @@
     user-select: none;
   }
 
+  /* Hide default cursor on desktop when custom 3D game cursor is active */
+  @media (pointer: fine) {
+    html, body, button, a, [role="button"], select, .cursor-pointer {
+      cursor: none !important;
+    }
+    input, textarea, [contenteditable="true"] {
+      cursor: text !important;
+    }
+  }
+
   h1, h2, h3, h4, .font-display {
     font-family: var(--font-display);
   }
@@ -46,6 +56,227 @@
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+
+/* Child-friendly Character Motion & Engagement Keyframes */
+@keyframes characterFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.8deg);
+  }
+}
+
+@keyframes characterBreathe {
+  0%, 100% {
+    transform: scale(1, 1) translateY(0);
+  }
+  50% {
+    transform: scale(1.02, 0.985) translateY(-4px);
+  }
+}
+
+@keyframes characterWiggle {
+  0%, 100% {
+    transform: rotate(0deg) scale(1.04);
+  }
+  25% {
+    transform: rotate(-2.5deg) scale(1.06) translateY(-5px);
+  }
+  75% {
+    transform: rotate(2.5deg) scale(1.06) translateY(-5px);
+  }
+}
+
+@keyframes characterBounceActive {
+  0%, 100% {
+    transform: translateY(0) scale(1.03);
+  }
+  30% {
+    transform: translateY(-14px) scale(1.06, 0.95);
+  }
+  60% {
+    transform: translateY(-3px) scale(0.98, 1.03);
+  }
+}
+
+@keyframes heroIdleBreathing {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-8px) rotate(1.5deg) scale(1.02);
+  }
+  50% {
+    transform: translateY(-12px) rotate(0deg) scale(1.03);
+  }
+  75% {
+    transform: translateY(-6px) rotate(-1.5deg) scale(1.01);
+  }
+}
+
+@keyframes islandFloating {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes heroShadowPulse {
+  0%, 100% {
+    transform: scale(1, 1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(0.82, 0.82);
+    opacity: 0.12;
+  }
+}
+
+@keyframes sunSlowContinuousSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sunCounterSlowSpin {
+  0% {
+    transform: rotate(360deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes sunBreathingGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.5));
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 28px rgba(245, 158, 11, 0.75));
+  }
+}
+
+@keyframes sunBobbing {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes butterflyFlutter {
+  0%, 100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+  25% {
+    transform: translate(8px, -12px) rotate(4deg);
+  }
+  50% {
+    transform: translate(18px, -6px) rotate(-3deg);
+  }
+  75% {
+    transform: translate(10px, -16px) rotate(5deg);
+  }
+}
+
+@keyframes butterflyFlutterReverse {
+  0%, 100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+  25% {
+    transform: translate(-10px, -14px) rotate(-5deg);
+  }
+  50% {
+    transform: translate(-16px, -4px) rotate(3deg);
+  }
+  75% {
+    transform: translate(-8px, -18px) rotate(-4deg);
+  }
+}
+
+@keyframes speechBubbleFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.03);
+  }
+}
+
+.animate-island-float {
+  animation: islandFloating 4s ease-in-out infinite;
+}
+
+.animate-hero-idle {
+  animation: heroIdleBreathing 3.6s ease-in-out infinite;
+}
+
+.animate-hero-shadow {
+  animation: heroShadowPulse 4s ease-in-out infinite;
+}
+
+.animate-sun-spin-slow {
+  animation: sunSlowContinuousSpin 16s linear infinite;
+}
+
+.animate-sun-counter-spin {
+  animation: sunCounterSlowSpin 22s linear infinite;
+}
+
+.animate-sun-glow-breathe {
+  animation: sunBreathingGlow 3.5s ease-in-out infinite;
+}
+
+.animate-sun-bob {
+  animation: sunBobbing 4s ease-in-out infinite;
+}
+
+.animate-butterfly-1 {
+  animation: butterflyFlutter 6s ease-in-out infinite;
+}
+
+.animate-butterfly-2 {
+  animation: butterflyFlutterReverse 7s ease-in-out infinite;
+}
+
+.animate-bubble-float {
+  animation: speechBubbleFloat 3s ease-in-out infinite;
+}
+
+.animate-character-float {
+  animation: characterFloat 3.8s ease-in-out infinite;
+}
+
+.animate-character-breathe {
+  animation: characterBreathe 3s ease-in-out infinite;
+}
+
+.animate-character-wiggle {
+  animation: characterWiggle 2.4s ease-in-out infinite;
+}
+
+.animate-character-active {
+  animation: characterBounceActive 1.8s ease-in-out infinite;
+}
+
+.animate-hero-wave {
+  animation: heroGentleWave 3.6s ease-in-out infinite;
+}
+
+.animate-hero-shadow {
+  animation: heroShadowPulse 3.6s ease-in-out infinite;
 }
 
 /* Custom child-friendly focus rings */

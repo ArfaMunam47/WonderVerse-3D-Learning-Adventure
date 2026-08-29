@@ -11,6 +11,7 @@ import { AdventureBagModal } from '../inventory/AdventureBagModal';
 import { getCharacterById } from '../../data/charactersData';
 import { audioService } from '../../utils/audio';
 import { AuthUser, UserProfile } from '../../utils/api';
+import { LearningExperienceSideDock } from '../parent/LearningExperienceSideDock';
 import { ZoomIn, ZoomOut, Compass, Sparkles, Star, Navigation, MapPin, Play, Pause, X, ChevronRight, Volume2, VolumeX, Shield, User, BookOpen, Package, Check, Award } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -38,6 +39,7 @@ interface MeadowCanvasProps {
   soundEnabled?: boolean;
   user?: AuthUser | null;
   profile?: UserProfile | null;
+  onReturnToStartGate?: () => void;
 }
 
 export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
@@ -63,7 +65,8 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
   onToggleSound,
   soundEnabled = true,
   user = null,
-  profile = null
+  profile = null,
+  onReturnToStartGate
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -98,8 +101,8 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
   // Track collected item IDs in this session
   const collectedItemIds = useRef<Set<string>>(new Set());
 
-  // Player Explorer Companion Position & Movement
-  const explorerPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.2, 8));
+  // Player Explorer Companion Position & Movement (Spawned on Start Gate Star Podium at 0, 10)
+  const explorerPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.2, 10));
   const targetWalkPos = useRef<THREE.Vector3 | null>(null);
   const explorerAngle = useRef<number>(0);
   const isWalking = useRef<boolean>(false);
@@ -416,14 +419,14 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
               }
 
               if (c.type === 'coin') {
-                showCelebrationToast(`🪙 +${c.value || 1} Meadow Gold Coin! (Added to Bag)`);
+                showCelebrationToast(`+${c.value || 1} Meadow Coin 🪙`);
               } else if (c.type === 'gem') {
-                showCelebrationToast(`💎 +${c.value || 5} Sparkly Gem Crystal!`);
+                showCelebrationToast(`+${c.value || 5} Gem Crystal 💎`);
               } else if (c.type === 'clover') {
-                showCelebrationToast(`🍀 +${c.value || 3} Lucky Four-Leaf Clover!`);
+                showCelebrationToast(`+${c.value || 3} Lucky Clover 🍀`);
               } else if (c.type === 'fruit') {
                 setBagLootFruits(prev => prev + 1);
-                showCelebrationToast(`🍓 +1 Sweet Meadow Berry! (Packed in Bag)`);
+                showCelebrationToast(`+1 Meadow Berry 🍓`);
               }
             }
           });
@@ -434,6 +437,24 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
           const elapsedSec = performance.now() * 0.001;
           anim.roadBlockages.forEach(b => {
             b.updateAnimation(elapsedSec, !!clearedBlockages[b.id]);
+          });
+        }
+
+        // 3D Start Gate Pinwheels, Bell, and Balloon animations
+        if (anim.startGatePinwheels) {
+          anim.startGatePinwheels.forEach((pw, idx) => {
+            pw.rotation.z += delta * (idx % 2 === 0 ? 3.5 : -3.5);
+          });
+        }
+        if (anim.startGateBell) {
+          const bellTime = performance.now() * 0.003;
+          anim.startGateBell.rotation.z = Math.sin(bellTime * 2) * 0.12;
+        }
+        if (anim.startGateBalloons) {
+          const bTime = performance.now() * 0.002;
+          anim.startGateBalloons.forEach((bg, idx) => {
+            bg.position.y = 4.2 + Math.sin(bTime * 2 + idx) * 0.15;
+            bg.rotation.z = Math.sin(bTime + idx) * 0.05;
           });
         }
       }
@@ -825,6 +846,19 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
                   rewardZone: 'numbers'
                 });
               }
+            } else if (target.type === 'start_gate') {
+              confetti({
+                particleCount: 50,
+                spread: 70,
+                origin: { y: 0.6 }
+              });
+              audioService.playMusicalNote(4);
+              audioService.playSparkle();
+              if (target.id === 'adventure_start_gate_bell') {
+                showCelebrationToast('🔔 *DING-DONG!* Golden Start Bell rang! Ready to explore Wonder Meadow!');
+              } else {
+                showCelebrationToast('🌟 Wonder Adventure Start Gate! Stand on the Star Pad to begin!');
+              }
             } else if (target.type === 'zone') {
               // Clicked on a zone landmark: guide along path there!
               startGuidedTrail(target.id as WorldZoneId, true);
@@ -911,7 +945,23 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       onCollectItem('coin', 5);
       onCollectItem('star', 1);
     }
-    showCelebrationToast(`🎉 ${blockage.unlockNotice} (+1 Star & +5 Coins)`);
+    showCelebrationToast(`🎉 ${blockage.clearedMessage} (+1 Star & +5 Coins)`);
+  };
+
+  const handleReturnToStartGate = () => {
+    handleStopMovement();
+    explorerPos.current.set(0, 0.2, 10);
+    cameraAzimuth.current = 0;
+    cameraPolar.current = Math.PI / 4.2;
+    cameraDistance.current = 36;
+    audioService.playMusicalNote(3);
+    audioService.playSparkle();
+    confetti({
+      particleCount: 50,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+    showCelebrationToast('✨ Back at the Adventure Start Gate! Ready to choose a trail!');
   };
 
   return (
@@ -926,170 +976,57 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       />
 
       {/* =========================================================================
-          UNIFIED CALM TOP FLOATING CAPSULE (No Clutter, High Contrast, Toddler-Friendly)
+          MINIMAL ESSENTIAL CONTROLS (UNOBTRUSIVE, CLEAN)
           ========================================================================= */}
-      <header
-        id="meadow-top-floating-bar"
-        className="absolute top-3 left-3 right-3 md:top-4 md:left-6 md:right-6 z-20 pointer-events-auto flex items-center justify-between gap-2"
-      >
-        {/* Left: Friend Picker & Adventure Bag & Coins */}
-        <div className="flex items-center gap-2">
-          {/* Exact Character Friend Picker Pill */}
-          {onOpenCharacterPicker && (
-            <button
-              onClick={() => {
-                audioService.playPop();
-                onOpenCharacterPicker();
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FFFDF7]/95 hover:bg-amber-100 text-stone-900 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md"
-              title={`Playing as ${currentCharacter.name} (Click to switch character)`}
-              aria-label="Change Explorer Character"
-            >
-              <span className="text-base">{currentCharacter.badgeEmoji}</span>
-              <span className="capitalize font-black hidden sm:inline">{currentCharacter.name}</span>
-            </button>
-          )}
+      {/* Top-Left Subtle Gate / Home Return Button */}
+      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 pointer-events-auto flex items-center gap-2">
+        <button
+          type="button"
+          id="btn-return-start-gate"
+          onClick={() => {
+            if (onReturnToStartGate) {
+              onReturnToStartGate();
+            } else {
+              handleReturnToStartGate();
+            }
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFFDF7]/90 hover:bg-white text-stone-700 hover:text-stone-900 border border-amber-300 shadow-md font-sans font-bold text-xs cursor-pointer active:scale-95 transition-all backdrop-blur-xs min-h-[38px]"
+          title="Return to Start Gate"
+          aria-label="Return to Start Gate"
+        >
+          <span className="text-sm">⛩️</span>
+          <span>Gate</span>
+        </button>
+      </div>
 
-          {/* Interactive Adventure Bag Button (Pouch of collectibles) */}
+      {/* Top-Right Single Small Sound Control */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 pointer-events-auto flex items-center gap-2">
+        {onToggleSound && (
           <button
+            type="button"
+            id="btn-toggle-sound"
             onClick={() => {
               audioService.playPop();
-              setIsBagOpen(true);
+              onToggleSound();
             }}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FFFDF7]/95 hover:bg-amber-50 text-stone-900 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md ${
-              bagBounceFlash ? 'animate-bounce ring-4 ring-amber-400 bg-amber-100 scale-105' : ''
-            }`}
-            title="Open Adventure Bag (View collected coins, gems, clovers, fruits & blockage badges)"
-            aria-label="Open Adventure Backpack"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FFFDF7]/90 hover:bg-white text-stone-700 hover:text-stone-900 border border-amber-300 shadow-md flex items-center justify-center cursor-pointer active:scale-95 transition-all backdrop-blur-xs"
+            title={soundEnabled ? 'Mute Sound' : 'Enable Sound'}
+            aria-label={soundEnabled ? 'Mute Sound' : 'Enable Sound'}
           >
-            <span className="text-base">🎒</span>
-            <span className="hidden sm:inline">Bag</span>
-            <span className="bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded-full text-[10px] md:text-xs">
-              {coins + gems + clovers + stars + bagLootFruits}
-            </span>
-          </button>
-
-          {/* Collectibles Pouch Tracker: Coins & Stars */}
-          <div
-            className="flex items-center gap-2 bg-[#FFFDF7]/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border-2 border-amber-300 shadow-md text-xs md:text-sm font-display font-black text-stone-900"
-            title="Collected Coins and Wonder Stars"
-          >
-            <div className="flex items-center gap-1 text-amber-900">
-              <span className="text-base">🪙</span>
-              <span>{coins}</span>
-            </div>
-            <span className="text-stone-300">•</span>
-            <div className="flex items-center gap-1 text-purple-900">
-              <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
-              <span>{stars}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Center: Big Cheerful "🌟 Learn & Play" & "🚶 Walk Road" Buttons */}
-        <div className="flex items-center gap-2">
-          {onOpenLearn && (
-            <button
-              onClick={() => {
-                audioService.playSparkle();
-                onOpenLearn();
-              }}
-              className="flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 rounded-2xl md:rounded-3xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-stone-950 font-display font-black text-xs md:text-sm border-2 border-amber-300 shadow-lg cursor-pointer active:scale-95 transition-all animate-pulse"
-              title="Open Learning Adventures Hub (Phonics, Numbers, Animals, Music, Stories)"
-            >
-              <Sparkles className="w-4 h-4 text-stone-950 fill-stone-950" />
-              <span>✨ Play & Learn</span>
-            </button>
-          )}
-
-          {/* Quick 1-Tap Walk Next Station */}
-          <button
-            onClick={() => {
-              if (isAutoWalkingState) {
-                stopAutoWalk();
-              } else {
-                startGuidedTrail(guidedZoneId || 'alphabet', true);
-              }
-            }}
-            className={`hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border-2 font-display font-black text-xs md:text-sm cursor-pointer shadow-md active:scale-95 transition-all backdrop-blur-md ${
-              isAutoWalkingState
-                ? 'bg-amber-500 text-white border-amber-600'
-                : 'bg-[#FFFDF7]/95 hover:bg-emerald-50 text-emerald-900 border-emerald-300'
-            }`}
-            title="Follow the road to the next learning station"
-          >
-            {isAutoWalkingState ? (
-              <>
-                <Pause className="w-4 h-4 fill-white" />
-                <span>Pause</span>
-              </>
+            {soundEnabled ? (
+              <Volume2 className="w-4.5 h-4.5 text-stone-700" />
             ) : (
-              <>
-                <Play className="w-4 h-4 fill-emerald-700 text-emerald-700" />
-                <span>🚶 Walk Road</span>
-              </>
+              <VolumeX className="w-4.5 h-4.5 text-rose-500" />
             )}
           </button>
-        </div>
+        )}
+      </div>
 
-        {/* Right: Sound, Map & Parents Gate */}
-        <div className="flex items-center gap-1.5 md:gap-2">
-          {/* Sound Toggle */}
-          {onToggleSound && (
-            <button
-              onClick={() => {
-                audioService.playPop();
-                onToggleSound();
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl border-2 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md ${
-                soundEnabled !== false
-                  ? 'bg-[#FFFDF7]/95 hover:bg-white text-sky-800 border-sky-300'
-                  : 'bg-rose-50/95 hover:bg-rose-100 text-rose-700 border-rose-300'
-              }`}
-              title={soundEnabled !== false ? 'Sound is ON (Click to mute)' : 'Sound is OFF (Click to unmute)'}
-            >
-              {soundEnabled !== false ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              <span className="hidden sm:inline">{soundEnabled !== false ? 'Sound' : 'Muted'}</span>
-            </button>
-          )}
-
-          {/* Map Button */}
-          {onOpenMap && (
-            <button
-              onClick={() => {
-                audioService.playPop();
-                onOpenMap();
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-[#FFFDF7]/95 hover:bg-white text-stone-800 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md"
-              title="Open 3D World Map"
-            >
-              <Compass className="w-4 h-4 text-emerald-600" />
-              <span className="hidden md:inline">Map</span>
-            </button>
-          )}
-
-          {/* Parents & Family Pass Button (Protected by Math Gate) */}
-          {onOpenCaregiver && (
-            <button
-              onClick={() => {
-                audioService.playPop();
-                onOpenCaregiver();
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-gradient-to-r from-amber-100 to-yellow-100 hover:from-amber-200 hover:to-yellow-200 text-amber-950 border-2 border-amber-300 shadow-md font-display font-black text-xs md:text-sm cursor-pointer active:scale-95 transition-all backdrop-blur-md"
-              title="Parents & Caregivers: Progress, Pedagogy & Family Pass"
-            >
-              <Shield className="w-4 h-4 text-amber-700" />
-              <span className="hidden sm:inline">Parents</span>
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* Real-time Reward Celebration Toast */}
+      {/* Real-time Reward Celebration Toast (Action -> Temporary Feedback -> Disappear) */}
       {starBannerText && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in zoom-in-95 fade-in slide-in-from-top-4">
-          <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-stone-950 font-display font-black px-6 py-3 rounded-full shadow-2xl border-2 border-white flex items-center gap-2.5 text-sm md:text-base">
-            <Star className="w-5 h-5 fill-stone-950 text-stone-950 animate-spin" />
+        <div className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in zoom-in-95 fade-in slide-in-from-top-3 duration-300">
+          <div className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-stone-950 font-display font-black px-5 py-2.5 rounded-full shadow-2xl border-2 border-white flex items-center gap-2 text-xs sm:text-sm tracking-wide">
+            <Sparkles className="w-4 h-4 text-amber-900 animate-spin" />
             <span>{starBannerText}</span>
           </div>
         </div>

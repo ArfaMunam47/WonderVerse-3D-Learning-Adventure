@@ -9,6 +9,7 @@ import { AccessibilityMenu } from './components/accessibility/AccessibilityMenu'
 import { ParentCaregiverArea } from './components/parent/ParentCaregiverArea';
 import { WelcomeScreen } from './components/welcome/WelcomeScreen';
 import { CharacterSelectionScreen } from './components/welcome/CharacterSelectionScreen';
+import { StartGateScreen } from './components/gate/StartGateScreen';
 import { UserProfileModal } from './components/profile/UserProfileModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { CustomCursor } from './components/cursor/CustomCursor';
@@ -38,8 +39,8 @@ export default function App() {
   // Loading state during initial authentication session check
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
 
-  // Navigation Flow: 'welcome' -> 'character_select' -> 'world'
-  const [screenMode, setScreenMode] = useState<'welcome' | 'character_select' | 'world'>('welcome');
+  // Navigation Flow: 'welcome' -> 'character_select' -> 'start_gate' -> 'world'
+  const [screenMode, setScreenMode] = useState<'welcome' | 'character_select' | 'start_gate' | 'world'>('welcome');
   const [activeZone, setActiveZone] = useState<WorldZoneId | null>(null);
 
   // Authentication & Profile State
@@ -455,14 +456,25 @@ export default function App() {
           progress={progress}
           onConfirm={(pickedId) => {
             handleSelectCharacter(pickedId);
-            setScreenMode('world');
+            setScreenMode('start_gate');
           }}
           onBack={() => setScreenMode('welcome')}
           onOpenParentArea={() => setIsCaregiverOpen(true)}
         />
       )}
 
-      {/* 3. PRIMARY GAME WORLD & EXPLORATION VIEW (Clean Full-Screen 3D Experience) */}
+      {/* 3. 2D ADVENTURE STARTING GATE (Grand Entrance Threshold) */}
+      {screenMode === 'start_gate' && (
+        <StartGateScreen
+          characterId={characterId}
+          onEnterWorld={() => setScreenMode('world')}
+          onBackToCharacterSelect={() => setScreenMode('character_select')}
+          onOpenParentArea={() => setIsCaregiverOpen(true)}
+          progress={progress}
+        />
+      )}
+
+      {/* 4. PRIMARY GAME WORLD & EXPLORATION VIEW (Clean Full-Screen 3D Experience) */}
       {screenMode === 'world' && (
         <main className="relative flex-1 w-full h-full min-h-0 overflow-hidden">
           <MeadowCanvas
@@ -472,6 +484,7 @@ export default function App() {
             onOpenLearn={() => setIsLearnOpen(true)}
             onOpenRewards={() => setIsRewardsOpen(true)}
             onOpenCaregiver={() => setIsCaregiverOpen(true)}
+            onReturnToStartGate={() => setScreenMode('start_gate')}
             onOpenProfile={() => {
               if (user) {
                 setIsProfileOpen(true);

@@ -282,6 +282,56 @@ class AudioManager {
     this.currentSongTimeouts = [];
   }
 
+  // Polite, cute anime/cartoon child voice narration
+  public speakCuteAnimeChild(text = "Hey, let's explore!", force = true, onEnd?: () => void) {
+    if ((!this.soundEnabled && !force) || !('speechSynthesis' in window)) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel(); // Stop any pending utterance
+      const utterance = new SpeechSynthesisUtterance(text);
+      // High pitch and cheerful cadence for cute anime/cartoon child voice
+      utterance.pitch = 1.45;
+      utterance.rate = 1.05;
+
+      const voices = window.speechSynthesis.getVoices();
+      // Look for natural, cheerful, higher-pitched feminine or kid voices
+      const preferred = voices.find(v => (
+        v.lang.startsWith('en') && (
+          v.name.includes('Victoria') ||
+          v.name.includes('Samantha') ||
+          v.name.includes('Google US English') ||
+          v.name.includes('Zira') ||
+          v.name.includes('Karen') ||
+          v.name.includes('Flo') ||
+          v.name.includes('Natural') ||
+          v.name.includes('Female')
+        )
+      )) || voices.find(v => v.lang.startsWith('en'));
+
+      if (preferred) {
+        utterance.voice = preferred;
+      }
+
+      this.isSpeaking = true;
+      utterance.onend = () => {
+        this.isSpeaking = false;
+        if (onEnd) onEnd();
+      };
+      utterance.onerror = () => {
+        this.isSpeaking = false;
+        if (onEnd) onEnd();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      this.isSpeaking = false;
+      if (onEnd) onEnd();
+    }
+  }
+
   // Friendly encouragement / Text to Speech narration
   public speak(text: string, force = false, onEnd?: () => void) {
     if ((!this.narrationEnabled && !force) || !('speechSynthesis' in window)) {

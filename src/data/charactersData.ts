@@ -23,36 +23,36 @@ export const CHARACTER_UNLOCK_CONDITIONS: Record<ExplorerCharacterId, CharacterU
     isUnlockedByDefault: true
   },
   little_inventor: {
-    requiredStars: 10,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
   creative_dreamer: {
-    requiredStars: 25,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
   little_adventurer: {
-    requiredStars: 40,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
   star_sprite: {
-    requiredStars: 60,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
   future_companion: {
-    requiredStars: 100,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
 
   // Backwards compatibility mappings for older save states
   little_artist: {
-    requiredStars: 25,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
   forest_friend: {
     requiredStars: 0,
@@ -60,19 +60,19 @@ export const CHARACTER_UNLOCK_CONDITIONS: Record<ExplorerCharacterId, CharacterU
     isUnlockedByDefault: true
   },
   tiny_inventor: {
-    requiredStars: 10,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
   magical_companion: {
-    requiredStars: 60,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   },
   adventurous_kid: {
-    requiredStars: 40,
-    requiredCondition: 'Keep exploring!',
-    isUnlockedByDefault: false
+    requiredStars: 0,
+    requiredCondition: 'Available immediately',
+    isUnlockedByDefault: true
   }
 };
 
@@ -111,35 +111,35 @@ export const EXPLORER_CHARACTERS: ExplorerCharacter[] = [
   },
   {
     id: 'forest_fawn',
-    name: 'Lumi',
-    title: 'Explorer',
-    tagline: 'Cheerful little adventurer in a warm purple hoodie and yellow sneakers.',
-    personality: 'Energetic, friendly, curious, and loves exploring sunny trails with friends.',
-    badge: '⭐',
-    avatarEmoji: '🧒',
-    themeColor: '#9333EA', // Purple Violet
-    secondaryColor: '#FAF5FF',
-    accentColor: '#FACC15',
-    outfitDescription: 'Purple adventure hoodie with star badge, rolled-up khaki shorts, yellow sneakers, and teal backpack.',
-    favoriteActivity: 'Finding secret gold coins and exploring sunny nature trails.',
-    voiceGreeting: 'Hi friend! I am Lumi! Let’s explore Wonder Meadow together!',
+    name: 'Barnaby',
+    title: 'Bear Explorer',
+    tagline: 'Gentle, friendly bear cub explorer who loves discovering sunny honey trails.',
+    personality: 'Fluffy, warm-hearted, kind, and loves guiding friends through the meadow.',
+    badge: '🐻',
+    avatarEmoji: '🐻',
+    themeColor: '#D97706', // Warm Honey Amber
+    secondaryColor: '#FEF3C7',
+    accentColor: '#F59E0B',
+    outfitDescription: 'Fluffy honey-brown bear cub with an explorer sash, gold badge, and friendly smile.',
+    favoriteActivity: 'Finding wild berries and guiding friends on sunny woodland hikes.',
+    voiceGreeting: 'Hello friend! I am Barnaby the Bear! Let’s explore Wonder Meadow together!',
     genderStyle: 'neutral'
   },
   {
     id: 'little_inventor',
-    name: 'Leo',
-    title: 'Navigator',
-    tagline: 'Brave pathfinder with his golden adventure compass.',
-    personality: 'Friendly, energetic, and always knows the right way.',
-    badge: '🧭',
-    avatarEmoji: '👦',
+    name: 'Jojo',
+    title: 'Monkey Explorer',
+    tagline: 'Joyful little monkey explorer ready for sunny meadow quests and discovery.',
+    personality: 'Curious, cheerful, playful monkey who loves finding hidden treasures.',
+    badge: '🐵',
+    avatarEmoji: '🐵',
     themeColor: '#0284C7', // Sky Adventure Blue
     secondaryColor: '#E0F2FE',
     accentColor: '#FACC15',
-    outfitDescription: 'Bright blue adventure jacket with golden trims and golden compass in hand.',
-    favoriteActivity: 'Guiding friends through the hills with his compass.',
-    voiceGreeting: 'Hey explorer! I am Leo! Follow me, let’s discover new places!',
-    genderStyle: 'boy'
+    outfitDescription: 'Cute monkey explorer with blue adventure jacket and golden compass in hand.',
+    favoriteActivity: 'Guiding friends through sunny hills and finding secret spots.',
+    voiceGreeting: 'Ooh ooh! Hey explorer! I am Jojo! Let’s discover Wonder Meadow together!',
+    genderStyle: 'neutral'
   },
   {
     id: 'creative_dreamer',

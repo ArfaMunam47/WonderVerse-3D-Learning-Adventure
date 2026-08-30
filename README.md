@@ -235,7 +235,3 @@ Before opening a pull request for any visual or content change, consider whether
 Private development project © 2026 Wonder Meadow. All rights reserved. Not currently open source — please reach out about their use first.
 
 ---
-
-<div align="center">
-  <sub>Built with 💛 for every explorer — the calm, the curious, the wiggly, and the wonderful.</sub>
-</div>

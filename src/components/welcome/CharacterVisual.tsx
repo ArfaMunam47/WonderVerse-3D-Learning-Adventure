@@ -3,7 +3,7 @@ import { ExplorerCharacterId } from '../../types';
 import { Sparkles, Star } from 'lucide-react';
 import maxiPng from '../../assets/characters/maxi.png';
 import mayaPng from '../../assets/characters/maya.png';
-import lumiPng from '../../assets/characters/lumi.png';
+import boltPng from '../../assets/characters/bolt.png';
 import jojoPng from '../../assets/characters/jojo.png';
 
 interface CharacterVisualProps {
@@ -25,14 +25,14 @@ export const CharacterVisual: React.FC<CharacterVisualProps> = ({
   const getImageSrc = (id: ExplorerCharacterId): string => {
     switch (id) {
       case 'curious_explorer':
-        return maxiPng; // 1st character: Maxi (from uploaded image 1.png)
+        return maxiPng; // 1st character: Maxi
       case 'nature_explorer':
-        return mayaPng; // 2nd character: Maya (from uploaded image 5.png)
+        return mayaPng; // 2nd character: Maya
       case 'forest_fawn':
       case 'forest_friend':
       case 'magical_companion':
       case 'star_sprite':
-        return lumiPng; // 3rd character: Barnaby the Bear (3D Bear explorer)
+        return boltPng; // 3rd character: Bolt the Robotic Kid (Transparent 3D cutout)
       case 'little_inventor':
       case 'tiny_inventor':
       case 'creative_dreamer':
@@ -40,7 +40,7 @@ export const CharacterVisual: React.FC<CharacterVisualProps> = ({
       case 'little_adventurer':
       case 'adventurous_kid':
       default:
-        return jojoPng; // 4th character: Jojo the Monkey
+        return jojoPng; // 4th character: Jojo
     }
   };
 
@@ -54,7 +54,7 @@ export const CharacterVisual: React.FC<CharacterVisualProps> = ({
       case 'forest_friend':
       case 'magical_companion':
       case 'star_sprite':
-        return '/characters/lumi.png';
+        return '/characters/bolt.png';
       case 'little_inventor':
       case 'tiny_inventor':
       default:
@@ -68,7 +68,7 @@ export const CharacterVisual: React.FC<CharacterVisualProps> = ({
       : characterId === 'nature_explorer'
       ? 'Maya'
       : characterId === 'forest_fawn'
-      ? 'Barnaby'
+      ? 'Bolt'
       : 'Jojo';
 
   const primarySrc = getImageSrc(characterId);

@@ -101,12 +101,31 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
   // Track collected item IDs in this session
   const collectedItemIds = useRef<Set<string>>(new Set());
 
-  // Player Explorer Companion Position & Movement (Spawned on Start Gate Star Podium at 0, 10)
-  const explorerPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.2, 10));
+  // Player Explorer Companion Position & Movement (Spawned before the Grand Entrance Gate at 0, 22)
+  const explorerPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.2, 22));
   const targetWalkPos = useRef<THREE.Vector3 | null>(null);
   const explorerAngle = useRef<number>(0);
   const isWalking = useRef<boolean>(false);
   const walkTime = useRef<number>(0);
+
+  // Performance throttling refs (Prevents 60fps React state update re-renders!)
+  const lastLocationNameRef = useRef<string>('Central Meadow');
+  const lastTrailDistRef = useRef<number>(-1);
+  const onEarnStarRef = useRef(onEarnStar);
+  const onCollectItemRef = useRef(onCollectItem);
+  const onHoverZoneChangeRef = useRef(onHoverZoneChange);
+
+  useEffect(() => {
+    onEarnStarRef.current = onEarnStar;
+  }, [onEarnStar]);
+
+  useEffect(() => {
+    onCollectItemRef.current = onCollectItem;
+  }, [onCollectItem]);
+
+  useEffect(() => {
+    onHoverZoneChangeRef.current = onHoverZoneChange;
+  }, [onHoverZoneChange]);
 
   const triggerBagBounce = useCallback(() => {
     setBagBounceFlash(true);
@@ -382,11 +401,11 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
               s.collected = true;
               collectedItemIds.current.add(s.id);
               s.mesh.visible = false;
-              if (onEarnStar) {
-                onEarnStar();
+              if (onEarnStarRef.current) {
+                onEarnStarRef.current();
               }
-              if (onCollectItem) {
-                onCollectItem('star', 1);
+              if (onCollectItemRef.current) {
+                onCollectItemRef.current('star', 1);
               }
               showCelebrationToast('⭐ +1 Wonder Star! You found a secret meadow star!');
             }
@@ -414,8 +433,8 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
               triggerBagBounce();
               audioService.playPop();
 
-              if (onCollectItem) {
-                onCollectItem(c.type as any, c.value || 1);
+              if (onCollectItemRef.current) {
+                onCollectItemRef.current(c.type as any, c.value || 1);
               }
 
               if (c.type === 'coin') {
@@ -436,26 +455,48 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         if (anim.roadBlockages) {
           const elapsedSec = performance.now() * 0.001;
           anim.roadBlockages.forEach(b => {
-            b.updateAnimation(elapsedSec, !!clearedBlockages[b.id]);
+            b.updateAnimation(elapsedSec, !unclearedBlockagesRef.current.has(b.id));
           });
         }
 
-        // 3D Start Gate Pinwheels, Bell, and Balloon animations
-        if (anim.startGatePinwheels) {
-          anim.startGatePinwheels.forEach((pw, idx) => {
-            pw.rotation.z += delta * (idx % 2 === 0 ? 3.5 : -3.5);
-          });
-        }
-        if (anim.startGateBell) {
-          const bellTime = performance.now() * 0.003;
-          anim.startGateBell.rotation.z = Math.sin(bellTime * 2) * 0.12;
-        }
-        if (anim.startGateBalloons) {
-          const bTime = performance.now() * 0.002;
-          anim.startGateBalloons.forEach((bg, idx) => {
-            bg.position.y = 4.2 + Math.sin(bTime * 2 + idx) * 0.15;
-            bg.rotation.z = Math.sin(bTime + idx) * 0.05;
-          });
+        // Dynamic Grand Entrance Gate Auto-Open & Animations
+        if (world.entranceGate) {
+          const gate = world.entranceGate;
+          const distToGate = Math.hypot(explorerPos.current.x - gate.x, explorerPos.current.z - gate.z);
+
+          // Auto open when player reaches or hits the gate (distance < 3.8)
+          if (!gate.isOpen && distToGate < 3.8) {
+            gate.isOpen = true;
+            audioService.playSparkle();
+            confetti({
+              particleCount: 30,
+              spread: 60,
+              origin: { y: 0.6 }
+            });
+            showCelebrationToast('✨ The Grand Gates of Wonder Meadow Swing Open!');
+          }
+
+          // Smooth gate door swing
+          if (gate.isOpen && gate.openProgress < 1) {
+            gate.openProgress = Math.min(1, gate.openProgress + delta * 2.2);
+            const rotAng = gate.openProgress * (Math.PI * 0.55);
+            gate.doorPivotL.rotation.y = -rotAng;
+            gate.doorPivotR.rotation.y = rotAng;
+          }
+
+          // Spin pinwheels
+          if (gate.pinwheels) {
+            gate.pinwheels.forEach((pw, idx) => {
+              pw.rotation.z += delta * (idx % 2 === 0 ? 3.5 : -3.5);
+            });
+          }
+
+          // Waving mascot guards
+          if (gate.guard1 && gate.guard2) {
+            const wave = Math.sin(performance.now() * 0.004);
+            gate.guard1.rotation.y = wave * 0.18;
+            gate.guard2.rotation.y = -wave * 0.18;
+          }
         }
       }
 
@@ -648,7 +689,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         cameraRef.current.lookAt(explorerPos.current.x, explorerPos.current.y + 1.2, explorerPos.current.z);
       }
 
-      // Location detection
+      // Location detection with ref deduplication (Prevents 60fps React re-renders)
       let closestZone: string = 'Central Meadow';
       let minZoneDist = 28;
 
@@ -661,14 +702,20 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
         }
       });
 
-      setCurrentLocationName(closestZone);
+      if (closestZone !== lastLocationNameRef.current) {
+        lastLocationNameRef.current = closestZone;
+        setCurrentLocationName(closestZone);
+      }
 
-      // Update distance to guided zone
+      // Update distance to guided zone with deduplication
       if (guidedZoneId) {
         const anchor = world.zoneAnchors.get(guidedZoneId);
         if (anchor) {
           const dist = Math.round(Math.hypot(anchor.x - explorerPos.current.x, anchor.z - explorerPos.current.z));
-          setTrailDistance(dist);
+          if (dist !== lastTrailDistRef.current) {
+            lastTrailDistRef.current = dist;
+            setTrailDistance(dist);
+          }
         }
       }
 
@@ -682,7 +729,7 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
       resizeObserver.disconnect();
       renderer.dispose();
     };
-  }, [characterId, gender, onEarnStar, destinationZone, guidedZoneId]);
+  }, []);
 
   // Pointer Handlers for Orbit Drag & Click to Move
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -722,15 +769,15 @@ export const MeadowCanvas: React.FC<MeadowCanvasProps> = ({
           const target = worldRef.current.interactiveMap.get(hitObj);
           if (target) {
             setHoveredTargetLabel(target.label);
-            if (onHoverZoneChange && target.type === 'zone') {
-              onHoverZoneChange(target.id as WorldZoneId);
+            if (onHoverZoneChangeRef.current && target.type === 'zone') {
+              onHoverZoneChangeRef.current(target.id as WorldZoneId);
             }
             return;
           }
         }
       }
       setHoveredTargetLabel(null);
-      if (onHoverZoneChange) onHoverZoneChange(null);
+      if (onHoverZoneChangeRef.current) onHoverZoneChangeRef.current(null);
     }
   };
 

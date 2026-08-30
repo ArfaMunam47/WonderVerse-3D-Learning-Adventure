@@ -1,6 +1,6 @@
 {
-  "name": "Wonder Meadow",
-  "description": "An accessible 3D interactive learning world where children explore, play, discover, and learn at their own pace.",
+  "name": "Wondermido",
+  "description": "An accessible 3D interactive learning game where children explore, play, discover, and learn at their own pace.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

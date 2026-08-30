@@ -14,8 +14,12 @@ export interface PathNode {
 // 1. MASTER ROAD WAYPOINT GRAPH (Plaza, Bridges, Roads, Outer Loop, & Zones)
 // ---------------------------------------------------------------------------
 export const ROAD_NODES: Record<string, PathNode> = {
+  // Entrance Grand Avenue (Connecting Spawning Path -> Grand Gate -> Central Meadow Plaza)
+  entrance_spawn: { id: 'entrance_spawn', x: 0, z: 24, label: 'Wonder Meadow Entrance', neighbors: ['entrance_gate'] },
+  entrance_gate: { id: 'entrance_gate', x: 0, z: 14, label: 'Grand Wonder Gate', neighbors: ['entrance_spawn', 'plaza_center', 'bridge_south_in'] },
+
   // Central Meadow Plaza
-  plaza_center: { id: 'plaza_center', x: 0, z: 0, label: 'Wonder Fountain Plaza', neighbors: ['bridge_north_in', 'bridge_south_in', 'bridge_west_in', 'bridge_east_in', 'bridge_nw_in', 'bridge_ne_in', 'bridge_sw_in', 'bridge_se_in'] },
+  plaza_center: { id: 'plaza_center', x: 0, z: 0, label: 'Wonder Fountain Plaza', neighbors: ['entrance_gate', 'bridge_north_in', 'bridge_south_in', 'bridge_west_in', 'bridge_east_in', 'bridge_nw_in', 'bridge_ne_in', 'bridge_sw_in', 'bridge_se_in'] },
 
   // North Bridge (towards Story Meadow)
   bridge_north_in: { id: 'bridge_north_in', x: 0, z: -16, neighbors: ['plaza_center', 'bridge_north_out'] },

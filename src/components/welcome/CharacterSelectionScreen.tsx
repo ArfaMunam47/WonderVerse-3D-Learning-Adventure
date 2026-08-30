@@ -45,12 +45,12 @@ const COMPANIONS: CompanionProfile[] = [
   },
   {
     id: 'forest_fawn',
-    name: 'BARNABY',
-    personality: 'Bear Explorer',
-    themeColor: '#D97706', // Warm Honey Bear
-    accentColor: '#F59E0B',
-    badgeEmoji: '🐻',
-    voiceLine: "Hello friend! I'm Barnaby the Bear! Let's explore Wonder Meadow together!"
+    name: 'BOLT',
+    personality: 'Robo-Kid Explorer',
+    themeColor: '#06B6D4', // Cyan Electric Blue
+    accentColor: '#38BDF8',
+    badgeEmoji: '🤖',
+    voiceLine: "Beep boop! I'm Bolt the robot kid! Let's explore Wonder Meadow together!"
   },
   {
     id: 'little_inventor',

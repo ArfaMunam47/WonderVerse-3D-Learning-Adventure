@@ -111,18 +111,18 @@ export const EXPLORER_CHARACTERS: ExplorerCharacter[] = [
   },
   {
     id: 'forest_fawn',
-    name: 'Barnaby',
-    title: 'Bear Explorer',
-    tagline: 'Gentle, friendly bear cub explorer who loves discovering sunny honey trails.',
-    personality: 'Fluffy, warm-hearted, kind, and loves guiding friends through the meadow.',
-    badge: '🐻',
-    avatarEmoji: '🐻',
-    themeColor: '#D97706', // Warm Honey Amber
-    secondaryColor: '#FEF3C7',
-    accentColor: '#F59E0B',
-    outfitDescription: 'Fluffy honey-brown bear cub with an explorer sash, gold badge, and friendly smile.',
-    favoriteActivity: 'Finding wild berries and guiding friends on sunny woodland hikes.',
-    voiceGreeting: 'Hello friend! I am Barnaby the Bear! Let’s explore Wonder Meadow together!',
+    name: 'Bolt',
+    title: 'Robo-Kid Explorer',
+    tagline: 'Curious, cheerful robot kid powered by starlight batteries and friendly curiosity.',
+    personality: 'Friendly, tech-savvy, bright, and loves calculating fun paths and helping friends.',
+    badge: '🤖',
+    avatarEmoji: '🤖',
+    themeColor: '#06B6D4', // Electric Cyan Blue
+    secondaryColor: '#ECFEFF',
+    accentColor: '#38BDF8', // Starlight Blue
+    outfitDescription: 'Futuristic cyan and white robot plating, glowing blue smile visor screen, antenna, and explorer vest.',
+    favoriteActivity: 'Scanning for secret starry meadow gadgets and lighting up dark trails.',
+    voiceGreeting: 'Beep boop! Hi! I am Bolt! Let’s explore Wonder Meadow together!',
     genderStyle: 'neutral'
   },
   {

@@ -44,11 +44,26 @@ export interface ChildCharacterController {
   ears?: THREE.Group[];
 }
 
+export interface DynamicEntranceGate {
+  group: THREE.Group;
+  doorPivotL: THREE.Group;
+  doorPivotR: THREE.Group;
+  guard1: THREE.Group;
+  guard2: THREE.Group;
+  pinwheels: THREE.Group[];
+  signMesh: THREE.Mesh;
+  isOpen: boolean;
+  openProgress: number;
+  x: number;
+  z: number;
+}
+
 export interface WorldBuildResult {
   scene: THREE.Scene;
   interactiveMap: Map<THREE.Object3D, InteractiveItemTarget>;
   zoneAnchors: Map<WorldZoneId, THREE.Vector3>;
   obstacles: WorldObstacle[];
+  entranceGate: DynamicEntranceGate;
   animatedElements: {
     clouds: THREE.Group[];
     ducks: { mesh: THREE.Group; angle: number; speed: number; radius: number; centerX: number; centerZ: number }[];
@@ -128,13 +143,13 @@ export function buildExplorerCharacter(characterId: ExplorerCharacterId = DEFAUL
   const cid = (characterId || 'curious_explorer') as string;
 
   if (cid === 'forest_fawn' || cid === 'forest_friend') {
-    // Lumi - Joyful Child Explorer (Warm Purple Hoodie, Star Badge, Khaki Shorts, Sunny Yellow Sneakers, Teal Backpack)
-    shirtColor = '#9333EA'; // Vibrant Purple Explorer Hoodie
-    accentColor = '#FACC15'; // Golden Star Accent
-    pantsColor = '#D4D4D8'; // Khaki Beige Shorts
-    shoeColor = '#EAB308'; // Sunny Yellow Sneakers
-    hairColor = '#78350F'; // Soft Warm Brown Hair
-    backpackColor = '#0D9488'; // Teal Explorer Backpack
+    // Bolt - Robotic Kid Explorer (Electric Cyan & White Metallic Chassis, Starlight Blue Visor, Power Cell Pack)
+    shirtColor = '#06B6D4'; // Electric Cyan Robot Chassis
+    accentColor = '#38BDF8'; // Glowing Starlight Blue
+    pantsColor = '#F8FAFC'; // Polished White Plating
+    shoeColor = '#0284C7'; // Cyan Thruster Boots
+    hairColor = '#0EA5E9'; // Metallic Cyan Accent
+    backpackColor = '#0284C7'; // Power Cell Battery Pack
   } else if (cid === 'magical_companion' || cid === 'star_sprite') {
     // Nova - Star Companion
     shirtColor = '#8B5CF6';
@@ -267,10 +282,16 @@ export function buildExplorerCharacter(characterId: ExplorerCharacterId = DEFAUL
 
     // Character Unique Badges
     if (characterId === 'forest_fawn' || characterId === 'forest_friend') {
-      // Lumi: Golden Star Emblem on Chest
-      const starBadge = new THREE.Mesh(new THREE.OctahedronGeometry(0.085, 0), goldMat);
-      starBadge.position.set(-0.16, 0.12, 0.38);
-      bodyGroup.add(starBadge);
+      // Bolt: Starlight Power Battery Core on Chest
+      const coreHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 12), new THREE.MeshStandardMaterial({ color: '#0F172A', metalness: 0.8, roughness: 0.2 }));
+      coreHousing.rotation.x = Math.PI / 2;
+      coreHousing.position.set(0, 0.12, 0.38);
+      const coreLight = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 10, 10),
+        new THREE.MeshStandardMaterial({ color: '#38BDF8', emissive: '#0284C7', emissiveIntensity: 0.9, roughness: 0.1 })
+      );
+      coreLight.position.set(0, 0.12, 0.39);
+      bodyGroup.add(coreHousing, coreLight);
     } else if (characterId === 'creative_dreamer' || characterId === 'little_artist') {
       const brush = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.38, 8), new THREE.MeshStandardMaterial({ color: '#F472B6' }));
       brush.rotation.z = 0.2;
@@ -343,34 +364,49 @@ export function buildExplorerCharacter(characterId: ExplorerCharacterId = DEFAUL
 
   // Character Unique Headwear & Accessories
   if (characterId === 'forest_fawn' || characterId === 'forest_friend') {
-    // Lumi: Cozy Lavender Beanie Hat with Star Patch & Peeking Hair
-    const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.52, 16, 16), hairMat);
-    hairCap.position.set(0, 0.04, -0.02);
-    headGroup.add(hairCap);
-
-    // Beanie Hat Dome
-    const beanieDome = new THREE.Mesh(
-      new THREE.SphereGeometry(0.54, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.65),
-      new THREE.MeshStandardMaterial({ color: '#9333EA', roughness: 0.55 })
+    // Bolt: Futuristic Robot Helmet, Visor Screen, Glowing Antenna & Audio Dials
+    const robotHelmet = new THREE.Mesh(
+      new THREE.SphereGeometry(0.53, 16, 16),
+      new THREE.MeshStandardMaterial({ color: '#F8FAFC', roughness: 0.25, metalness: 0.4 })
     );
-    beanieDome.position.set(0, 0.16, -0.02);
+    robotHelmet.position.set(0, 0.04, -0.02);
 
-    // Folded Beanie Cuff
-    const beanieCuff = new THREE.Mesh(
-      new THREE.TorusGeometry(0.51, 0.07, 10, 20),
-      new THREE.MeshStandardMaterial({ color: '#7E22CE', roughness: 0.6 })
+    // Front Visor Screen Faceplate
+    const visorScreen = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.44, 0.44, 0.36, 16, 1, false, -Math.PI * 0.35, Math.PI * 0.7),
+      new THREE.MeshStandardMaterial({ color: '#0F172A', roughness: 0.1, metalness: 0.8 })
     );
-    beanieCuff.rotation.x = Math.PI / 2 - 0.1;
-    beanieCuff.position.set(0, 0.22, 0.04);
+    visorScreen.position.set(0, -0.02, 0.12);
 
-    // Golden Star Patch on Beanie Front
-    const starPatch = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.085, 0),
-      new THREE.MeshStandardMaterial({ color: '#FACC15', metalness: 0.4, roughness: 0.2 })
+    // Cute Antenna on Top
+    const antennaStem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.32, 8),
+      new THREE.MeshStandardMaterial({ color: '#0284C7', metalness: 0.7, roughness: 0.3 })
     );
-    starPatch.position.set(0, 0.28, 0.52);
+    antennaStem.position.set(0, 0.65, 0);
 
-    headGroup.add(beanieDome, beanieCuff, starPatch);
+    const antennaTip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.085, 10, 10),
+      new THREE.MeshStandardMaterial({ color: '#FACC15', emissive: '#F59E0B', emissiveIntensity: 0.9, roughness: 0.1 })
+    );
+    antennaTip.position.set(0, 0.82, 0);
+
+    // Ear Dials / Headphone Accents
+    const earDialL = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 0.08, 12),
+      new THREE.MeshStandardMaterial({ color: '#06B6D4', metalness: 0.6, roughness: 0.3 })
+    );
+    earDialL.rotation.z = Math.PI / 2;
+    earDialL.position.set(-0.52, 0, 0);
+
+    const earDialR = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 0.08, 12),
+      new THREE.MeshStandardMaterial({ color: '#06B6D4', metalness: 0.6, roughness: 0.3 })
+    );
+    earDialR.rotation.z = Math.PI / 2;
+    earDialR.position.set(0.52, 0, 0);
+
+    headGroup.add(robotHelmet, visorScreen, antennaStem, antennaTip, earDialL, earDialR);
   } else if (characterId === 'creative_dreamer' || characterId === 'little_artist') {
     // Luna: Artist Beret & Golden Star Tip
     const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.52, 16, 16), hairMat);
@@ -910,6 +946,9 @@ export function buildWonderMeadowWorld(): WorldBuildResult {
     const z2 = 6 + Math.sin(a2) * plazaRadius;
     createPavedRoad(x1, z1, x2, z2, 3.4);
   }
+
+  // 1b. Grand Entrance Arrival Avenue (from Spawn [0, 24] through Grand Entrance Gate [0, 14] to Plaza [0, 6])
+  createPavedRoad(0, 24, 0, 6, 3.8);
 
   // 2. Main Radial Avenues from Central Plaza to World Learning Zones
   WORLD_ZONES.forEach((zone) => {
@@ -2646,13 +2685,168 @@ export function buildWonderMeadowWorld(): WorldBuildResult {
   }
 
   // =========================================================================
+  // 21b. GRAND WONDER MEADOW ENTRANCE GATE (Physical 3D Double Gate at [0, 14])
+  // =========================================================================
+  const entranceGateGroup = new THREE.Group();
+  entranceGateGroup.position.set(0, 0, 14);
+
+  const grandGateWoodMat = new THREE.MeshStandardMaterial({ color: '#78350F', roughness: 0.75 });
+  const grandGateTrimMat = new THREE.MeshStandardMaterial({ color: '#F59E0B', roughness: 0.35, metalness: 0.4 });
+  const grandStoneBaseMat = new THREE.MeshStandardMaterial({ color: '#64748B', roughness: 0.9, flatShading: true });
+  const grandBannerMat = new THREE.MeshStandardMaterial({ color: '#0284C7', roughness: 0.4 });
+  const grandGoldSignMat = new THREE.MeshStandardMaterial({ color: '#FDE047', emissive: '#CA8A04', emissiveIntensity: 0.5, metalness: 0.6 });
+
+  // 1. Left and Right Pillars
+  const pillarGeo = new THREE.BoxGeometry(0.85, 4.2, 0.85);
+  const baseGeo = new THREE.BoxGeometry(1.2, 0.6, 1.2);
+  const capGeo = new THREE.ConeGeometry(0.7, 0.8, 4);
+
+  const pillarL = new THREE.Mesh(pillarGeo, grandGateWoodMat);
+  pillarL.position.set(-2.6, 2.1, 0);
+  const baseL = new THREE.Mesh(baseGeo, grandStoneBaseMat);
+  baseL.position.set(-2.6, 0.3, 0);
+  const capL = new THREE.Mesh(capGeo, grandGateTrimMat);
+  capL.position.set(-2.6, 4.6, 0);
+  capL.rotation.y = Math.PI / 4;
+
+  const pillarR = new THREE.Mesh(pillarGeo, grandGateWoodMat);
+  pillarR.position.set(2.6, 2.1, 0);
+  const baseR = new THREE.Mesh(baseGeo, grandStoneBaseMat);
+  baseR.position.set(2.6, 0.3, 0);
+  const capR = new THREE.Mesh(capGeo, grandGateTrimMat);
+  capR.position.set(2.6, 4.6, 0);
+  capR.rotation.y = Math.PI / 4;
+
+  entranceGateGroup.add(pillarL, baseL, capL, pillarR, baseR, capR);
+
+  // 2. Overhead Curved Welcome Arch Beam & Signboard
+  const archBeam = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.5, 0.6), grandGateWoodMat);
+  archBeam.position.set(0, 4.2, 0);
+
+  const grandSignBoard = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 0.25), grandBannerMat);
+  grandSignBoard.position.set(0, 4.4, 0.25);
+
+  const starDeco1 = new THREE.Mesh(new THREE.OctahedronGeometry(0.32), grandGoldSignMat);
+  starDeco1.position.set(-1.6, 4.4, 0.4);
+  const starDeco2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.32), grandGoldSignMat);
+  starDeco2.position.set(1.6, 4.4, 0.4);
+  const starDecoCenter = new THREE.Mesh(new THREE.OctahedronGeometry(0.45), grandGoldSignMat);
+  starDecoCenter.position.set(0, 5.2, 0.3);
+
+  entranceGateGroup.add(archBeam, grandSignBoard, starDeco1, starDeco2, starDecoCenter);
+
+  // 3. Left and Right Swinging Gate Doors (Articulated Hinged Pivots)
+  const doorPivotL = new THREE.Group();
+  doorPivotL.position.set(-2.15, 0, 0);
+
+  const doorLeafL = new THREE.Group();
+  const frameL = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.6, 0.14), grandGateWoodMat);
+  frameL.position.set(1.05, 1.4, 0);
+  const emblemL = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.08, 12), grandGateTrimMat);
+  emblemL.rotation.x = Math.PI / 2;
+  emblemL.position.set(1.05, 1.4, 0.08);
+  doorLeafL.add(frameL, emblemL);
+  doorPivotL.add(doorLeafL);
+
+  const doorPivotR = new THREE.Group();
+  doorPivotR.position.set(2.15, 0, 0);
+
+  const doorLeafR = new THREE.Group();
+  const frameR = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.6, 0.14), grandGateWoodMat);
+  frameR.position.set(-1.05, 1.4, 0);
+  const emblemR = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.08, 12), grandGateTrimMat);
+  emblemR.rotation.x = Math.PI / 2;
+  emblemR.position.set(-1.05, 1.4, 0.08);
+  doorLeafR.add(frameR, emblemR);
+  doorPivotR.add(doorLeafR);
+
+  entranceGateGroup.add(doorPivotL, doorPivotR);
+
+  // 4. Cheerful Mascot Guards on Left & Right
+  // Squirrel Scout Guard (Left)
+  const guard1 = new THREE.Group();
+  guard1.position.set(-3.5, 0, 0.5);
+  const sqBody = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 10), new THREE.MeshStandardMaterial({ color: '#D97706', roughness: 0.6 }));
+  sqBody.position.y = 0.6;
+  const sqHead = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshStandardMaterial({ color: '#D97706', roughness: 0.6 }));
+  sqHead.position.set(0, 1.2, 0);
+  const sqHat = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.35, 6), new THREE.MeshStandardMaterial({ color: '#16A34A' }));
+  sqHat.position.set(0, 1.6, 0);
+  const sqPaw = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 6), new THREE.MeshStandardMaterial({ color: '#B45309' }));
+  sqPaw.position.set(0.35, 1.1, 0.3);
+  guard1.add(sqBody, sqHead, sqHat, sqPaw);
+
+  // Teddy Explorer Guard (Right)
+  const guard2 = new THREE.Group();
+  guard2.position.set(3.5, 0, 0.5);
+  const tbBody = new THREE.Mesh(new THREE.SphereGeometry(0.58, 10, 10), new THREE.MeshStandardMaterial({ color: '#92400E', roughness: 0.7 }));
+  tbBody.position.y = 0.6;
+  const tbHead = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 8), new THREE.MeshStandardMaterial({ color: '#92400E', roughness: 0.7 }));
+  tbHead.position.set(0, 1.2, 0);
+  const tbEarL = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 6), new THREE.MeshStandardMaterial({ color: '#78350F' }));
+  tbEarL.position.set(-0.35, 1.5, 0);
+  const tbEarR = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 6), new THREE.MeshStandardMaterial({ color: '#78350F' }));
+  tbEarR.position.set(0.35, 1.5, 0);
+  const tbPaw = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 6), new THREE.MeshStandardMaterial({ color: '#78350F' }));
+  tbPaw.position.set(-0.35, 1.1, 0.3);
+  guard2.add(tbBody, tbHead, tbEarL, tbEarR, tbPaw);
+
+  entranceGateGroup.add(guard1, guard2);
+
+  // 5. Spinning Pinwheels
+  const gatePinwheels: THREE.Group[] = [];
+  const pwColors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B'];
+  [-2.6, 2.6].forEach((px, idx) => {
+    const pwGroup = new THREE.Group();
+    pwGroup.position.set(px, 5.2, 0);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 6), grandGateWoodMat);
+    stem.position.y = -0.2;
+    const blades = new THREE.Group();
+    for (let b = 0; b < 4; b++) {
+      const blade = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.35, 3),
+        new THREE.MeshStandardMaterial({ color: pwColors[(idx * 2 + b) % pwColors.length] })
+      );
+      blade.rotation.z = (b * Math.PI) / 2;
+      blade.position.set(Math.cos(blade.rotation.z) * 0.15, Math.sin(blade.rotation.z) * 0.15, 0);
+      blades.add(blade);
+    }
+    pwGroup.add(stem, blades);
+    entranceGateGroup.add(pwGroup);
+    gatePinwheels.push(blades);
+  });
+
+  scene.add(entranceGateGroup);
+
+  interactiveMap.set(grandSignBoard, {
+    type: 'start_gate',
+    id: 'grand_wonder_gate',
+    position: new THREE.Vector3(0, 2.2, 14),
+    label: '✨ Grand Wonder Gate (Walk up to open!)'
+  });
+
+  const entranceGate: DynamicEntranceGate = {
+    group: entranceGateGroup,
+    doorPivotL,
+    doorPivotR,
+    guard1,
+    guard2,
+    pinwheels: gatePinwheels,
+    signMesh: grandSignBoard,
+    isOpen: false,
+    openProgress: 0,
+    x: 0,
+    z: 14
+  };
+
+  // =========================================================================
   // 22. 3D ORIGINAL CARTOON CHARACTER (Diverse Explorers Support)
   // =========================================================================
   const explorerMesh = new THREE.Group();
   let currentCharacterId: ExplorerCharacterId = DEFAULT_CHARACTER_ID;
   let initialChild = buildExplorerCharacter(currentCharacterId);
   explorerMesh.add(initialChild.group);
-  explorerMesh.position.set(0, 0.2, 8); // Start in Central Meadow Hub
+  explorerMesh.position.set(0, 0.2, 22); // Spawn before the Grand Gate
   scene.add(explorerMesh);
 
   let activeController = initialChild.controller;
@@ -2677,6 +2871,7 @@ export function buildWonderMeadowWorld(): WorldBuildResult {
     interactiveMap,
     zoneAnchors,
     obstacles,
+    entranceGate,
     animatedElements: {
       clouds,
       ducks,
@@ -2688,9 +2883,9 @@ export function buildWonderMeadowWorld(): WorldBuildResult {
       hiddenStars,
       collectibles,
       roadBlockages,
-      startGatePinwheels,
-      startGateBell: bellGroup,
-      startGateBalloons
+      startGatePinwheels: gatePinwheels,
+      startGateBell: null,
+      startGateBalloons: []
     },
     explorerMesh,
     get childCharacterController() {

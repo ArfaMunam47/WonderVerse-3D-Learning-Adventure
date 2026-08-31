@@ -1,6 +1,6 @@
 {
   "name": "Wondermido",
-  "description": "An accessible 3D interactive learning game where children explore, play, discover, and learn at their own pace.",
+  "description": "Wonder Meadow - A joyful 3D learning world welcoming all children, including children with Down syndrome, developmental differences, and disabilities.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

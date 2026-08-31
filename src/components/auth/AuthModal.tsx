@@ -421,7 +421,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="p-3 bg-amber-50/70 border-t border-amber-200/60 text-center flex items-center justify-center gap-2">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
           <p className="text-[11px] text-stone-600 font-medium">
-            100% Ad-Free • COPPA Certified • No In-App Tricks
+            100% Ad-Free • Child Privacy Protected • No In-App Tricks
           </p>
         </div>
       </div>

@@ -320,7 +320,7 @@ export const ParentCaregiverArea: React.FC<ParentCaregiverAreaProps> = ({
   const navItems: { id: ParentTabId; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <ShieldCheck className="w-4 h-4" /> },
     { id: 'family_pass', label: 'Family Pass & Plans', icon: <CreditCard className="w-4 h-4 text-amber-600" /> },
-    { id: 'trust_safety', label: 'Trust & COPPA Safety', icon: <Shield className="w-4 h-4 text-emerald-600" /> },
+    { id: 'trust_safety', label: 'Child Privacy & Safety', icon: <Shield className="w-4 h-4 text-emerald-600" /> },
     { id: 'learning_zones', label: 'Learning Zones', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'progress', label: 'Child Progress', icon: <Award className="w-4 h-4" /> },
     { id: 'my_child', label: 'My Child', icon: <User className="w-4 h-4" /> },
@@ -698,14 +698,14 @@ export const ParentCaregiverArea: React.FC<ParentCaregiverAreaProps> = ({
                     </div>
                     <div className="flex items-center gap-3 font-semibold text-stone-700">
                       <span>✓ Secure SSL 256-Bit</span>
-                      <span>✓ COPPA Certified</span>
+                      <span>✓ Privacy-By-Design</span>
                       <span>✓ No Ads Ever</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* --- TAB 3: TRUST, SAFETY & COPPA CERTIFICATION --- */}
+              {/* --- TAB 3: TRUST, SAFETY & PRIVACY --- */}
               {activeTab === 'trust_safety' && (
                 <div className="space-y-4 animate-in fade-in">
                   <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
@@ -733,7 +733,7 @@ export const ParentCaregiverArea: React.FC<ParentCaregiverAreaProps> = ({
                       <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold text-sm">
                         🔒
                       </div>
-                      <h5 className="text-xs font-display font-black text-stone-900">COPPA & GDPR-K Compliant</h5>
+                      <h5 className="text-xs font-display font-black text-stone-900">Child Privacy Protection</h5>
                       <p className="text-xs text-stone-600 leading-relaxed">
                         We do not collect personal identifiers, geolocation, or behavioral ad profiles from children. All progress is tied safely to your parent-managed account.
                       </p>
@@ -988,8 +988,8 @@ export const ParentCaregiverArea: React.FC<ParentCaregiverAreaProps> = ({
               {activeTab === 'characters' && (
                 <div className="space-y-4 animate-in fade-in">
                   <div className="bg-sky-50 border border-sky-200 p-3.5 rounded-2xl">
-                    <h4 className="text-xs font-display font-black text-sky-950">Explorer Friends Directory</h4>
-                    <p className="text-xs text-sky-800 mt-0.5">8 distinct Wonder Meadow companions that inspire curiosity and creativity:</p>
+                    <h4 className="text-xs font-display font-black text-sky-950">Meadow Explorer Styles & Outfits</h4>
+                    <p className="text-xs text-sky-800 mt-0.5">Explore Wonder Meadow in cheerful themed styles and adventure outfits:</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

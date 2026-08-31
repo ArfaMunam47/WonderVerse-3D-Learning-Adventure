@@ -1,10 +1,10 @@
 import React from 'react';
 import { ExplorerCharacterId } from '../../types';
 import { Sparkles, Star } from 'lucide-react';
-import maxiPng from '../../assets/characters/maxi.png';
-import mayaPng from '../../assets/characters/maya.png';
-import boltPng from '../../assets/characters/bolt.png';
-import jojoPng from '../../assets/characters/jojo.png';
+import heroGirlSagePng from '../../assets/characters/hero_girl_sage.png';
+import heroGirlBlossomPng from '../../assets/characters/hero_girl_blossom.png';
+import heroGirlSunnyPng from '../../assets/characters/hero_girl_sunny.png';
+import heroGirlLavenderPng from '../../assets/characters/hero_girl_lavender.png';
 
 interface CharacterVisualProps {
   characterId: ExplorerCharacterId;
@@ -21,18 +21,18 @@ export const CharacterVisual: React.FC<CharacterVisualProps> = ({
   className = '',
   size = 'spotlight'
 }) => {
-  // Direct bundled transparent image asset mapping
+  // Direct bundled transparent image asset mapping for identical character
   const getImageSrc = (id: ExplorerCharacterId): string => {
     switch (id) {
       case 'curious_explorer':
-        return maxiPng; // 1st character: Maxi
+        return heroGirlSagePng; // 1st style: Classic Sage Dress
       case 'nature_explorer':
-        return mayaPng; // 2nd character: Maya
+        return heroGirlBlossomPng; // 2nd style: Blossom Rose Dress
       case 'forest_fawn':
       case 'forest_friend':
       case 'magical_companion':
       case 'star_sprite':
-        return boltPng; // 3rd character: Bolt the Robotic Kid (Transparent 3D cutout)
+        return heroGirlSunnyPng; // 3rd style: Sunny Yellow Hat Dress
       case 'little_inventor':
       case 'tiny_inventor':
       case 'creative_dreamer':
@@ -40,36 +40,36 @@ export const CharacterVisual: React.FC<CharacterVisualProps> = ({
       case 'little_adventurer':
       case 'adventurous_kid':
       default:
-        return jojoPng; // 4th character: Jojo
+        return heroGirlLavenderPng; // 4th style: Lavender Star Dress
     }
   };
 
   const getFallbackSrc = (id: ExplorerCharacterId): string => {
     switch (id) {
       case 'curious_explorer':
-        return '/characters/maxi.png';
+        return '/characters/hero_girl_sage.png';
       case 'nature_explorer':
-        return '/characters/maya.png';
+        return '/characters/hero_girl_blossom.png';
       case 'forest_fawn':
       case 'forest_friend':
       case 'magical_companion':
       case 'star_sprite':
-        return '/characters/bolt.png';
+        return '/characters/hero_girl_sunny.png';
       case 'little_inventor':
       case 'tiny_inventor':
       default:
-        return '/characters/jojo.png';
+        return '/characters/hero_girl_lavender.png';
     }
   };
 
   const characterName =
     characterId === 'curious_explorer'
-      ? 'Maxi'
+      ? 'Meadow Explorer'
       : characterId === 'nature_explorer'
-      ? 'Maya'
+      ? 'Blossom Artist'
       : characterId === 'forest_fawn'
-      ? 'Bolt'
-      : 'Jojo';
+      ? 'Sunny Adventurer'
+      : 'Lavender Dreamer';
 
   const primarySrc = getImageSrc(characterId);
   const fallbackSrc = getFallbackSrc(characterId);

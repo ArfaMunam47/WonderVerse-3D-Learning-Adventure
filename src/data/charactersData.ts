@@ -79,98 +79,98 @@ export const CHARACTER_UNLOCK_CONDITIONS: Record<ExplorerCharacterId, CharacterU
 export const EXPLORER_CHARACTERS: ExplorerCharacter[] = [
   {
     id: 'curious_explorer',
-    name: 'Maxi',
-    title: 'Explorer',
-    tagline: 'Loves sunny nature trails and finding secret meadow paths.',
-    personality: 'Curious, brave, and always ready for an outdoor adventure.',
+    name: 'Meadow Explorer',
+    title: 'Signature Style',
+    tagline: 'Loves sunny nature trails and peaceful meadow paths in her classic sage floral dress.',
+    personality: 'Curious, sweet, and always ready for a joyful meadow adventure.',
     badge: '🌿',
-    avatarEmoji: '👦',
-    themeColor: '#16A34A', // Explorer Forest Green
+    avatarEmoji: '👧',
+    themeColor: '#0F766E', // Forest Teal / Sage Green
     secondaryColor: '#DCFCE7',
     accentColor: '#F59E0B',
-    outfitDescription: 'Green explorer vest with leaf badge, khaki cargo shorts, and yellow backpack.',
-    favoriteActivity: 'Walking along the flower trails & spotting meadow wildlife.',
-    voiceGreeting: 'Hi! I am Maxi! Let’s explore Wonder Meadow together!',
-    genderStyle: 'boy'
+    outfitDescription: 'Classic sage-green smocked floral frock with short puff sleeves.',
+    favoriteActivity: 'Walking along the flower trails & listening to meadow birds.',
+    voiceGreeting: 'Hey! Welcome to Wonder Meadow! Let’s explore together!',
+    genderStyle: 'girl'
   },
   {
     id: 'nature_explorer',
-    name: 'Maya',
-    title: 'Creative',
-    tagline: 'Discovers magical blossoms and sparkles across the meadow.',
+    name: 'Blossom Artist',
+    title: 'Creative Style',
+    tagline: 'Discovers magical blossoms and sparkles across the meadow holding a daisy flower.',
     personality: 'Creative, kind-hearted, and loves flower magic.',
     badge: '🌸',
     avatarEmoji: '👧',
-    themeColor: '#EC4899', // Blossom Pink
+    themeColor: '#DB2777', // Blossom Rose Pink
     secondaryColor: '#FDF2F8',
     accentColor: '#A855F7',
-    outfitDescription: 'Pink explorer jacket, lilac floral tunic, flower hairpin, and star flower wand.',
+    outfitDescription: 'Soft rose-pink floral dress holding a bright meadow blossom.',
     favoriteActivity: 'Collecting sparkling petals in Creative Corner.',
-    voiceGreeting: 'Sparkles and sunshine! I am Maya! Let’s make something magical!',
+    voiceGreeting: 'Sparkles and sunshine! Let’s make something magical and beautiful together!',
     genderStyle: 'girl'
   },
   {
     id: 'forest_fawn',
-    name: 'Bolt',
-    title: 'Robo-Kid Explorer',
-    tagline: 'Curious, cheerful robot kid powered by starlight batteries and friendly curiosity.',
-    personality: 'Friendly, tech-savvy, bright, and loves calculating fun paths and helping friends.',
-    badge: '🤖',
-    avatarEmoji: '🤖',
-    themeColor: '#06B6D4', // Electric Cyan Blue
-    secondaryColor: '#ECFEFF',
-    accentColor: '#38BDF8', // Starlight Blue
-    outfitDescription: 'Futuristic cyan and white robot plating, glowing blue smile visor screen, antenna, and explorer vest.',
-    favoriteActivity: 'Scanning for secret starry meadow gadgets and lighting up dark trails.',
-    voiceGreeting: 'Beep boop! Hi! I am Bolt! Let’s explore Wonder Meadow together!',
-    genderStyle: 'neutral'
+    name: 'Sunny Adventurer',
+    title: 'Outdoor Style',
+    tagline: 'Sunny explorer with a cute straw sun hat ready for warm sunny trail quests.',
+    personality: 'Cheerful, warm, bright, and loves finding sunny secrets.',
+    badge: '🌻',
+    avatarEmoji: '👧',
+    themeColor: '#D97706', // Sunny Gold Amber
+    secondaryColor: '#FEF3C7',
+    accentColor: '#F59E0B',
+    outfitDescription: 'Pastel yellow sun dress with matching straw sun hat.',
+    favoriteActivity: 'Exploring sunny hills and discovering hidden fruit orchards.',
+    voiceGreeting: 'Hello sunshine! Let’s discover the warmest, happiest trails in Wonder Meadow!',
+    genderStyle: 'girl'
   },
   {
     id: 'little_inventor',
-    name: 'Jojo',
-    title: 'Monkey Explorer',
-    tagline: 'Joyful little monkey explorer ready for sunny meadow quests and discovery.',
-    personality: 'Curious, cheerful, playful monkey who loves finding hidden treasures.',
-    badge: '🐵',
-    avatarEmoji: '🐵',
-    themeColor: '#0284C7', // Sky Adventure Blue
-    secondaryColor: '#E0F2FE',
-    accentColor: '#FACC15',
-    outfitDescription: 'Cute monkey explorer with blue adventure jacket and golden compass in hand.',
-    favoriteActivity: 'Guiding friends through sunny hills and finding secret spots.',
-    voiceGreeting: 'Ooh ooh! Hey explorer! I am Jojo! Let’s discover Wonder Meadow together!',
-    genderStyle: 'neutral'
+    name: 'Lavender Dreamer',
+    title: 'Story Style',
+    tagline: 'Gentle friend in a cozy lavender floral dress with starry ribbons for bedtime tales.',
+    personality: 'Gentle, thoughtful, and loves peaceful storybook adventures.',
+    badge: '✨',
+    avatarEmoji: '👧',
+    themeColor: '#7C3AED', // Violet Lavender
+    secondaryColor: '#F5F3FF',
+    accentColor: '#EC4899',
+    outfitDescription: 'Soft lavender dress with delicate star embroidery and lilac ribbon headband.',
+    favoriteActivity: 'Listening to calm stories at the Story Pavilion.',
+    voiceGreeting: 'Hello sweet friend! What peaceful story or game will we explore today?',
+    genderStyle: 'girl'
   },
   {
     id: 'creative_dreamer',
-    name: 'Sammy',
-    title: 'Dreamer',
+    name: 'Starlight Friend',
+    title: 'Dreamer Style',
     tagline: 'Full of joyful ideas, bright energy, and exciting games.',
     personality: 'Imaginative, cheerful, and loves sharing happy discoveries.',
     badge: '⭐',
-    avatarEmoji: '🧑',
-    themeColor: '#8B5CF6', // Purple Violet
+    avatarEmoji: '👧',
+    themeColor: '#8B5CF6',
     secondaryColor: '#F3E8FF',
     accentColor: '#F59E0B',
-    outfitDescription: 'Purple adventure jacket with star badge, star hairclip, and star compass.',
-    favoriteActivity: 'Exploring hidden caves and pointing out fun surprises.',
-    voiceGreeting: 'Sparkle and smiles! I am Sammy! What fun game will we play today?',
-    genderStyle: 'neutral'
+    outfitDescription: 'Lavender star adventure dress with golden flower hairpins.',
+    favoriteActivity: 'Exploring starry meadows and night sky constellations.',
+    voiceGreeting: 'Sparkle and smiles! Let’s have a wonderful adventure!',
+    genderStyle: 'girl'
   },
   {
     id: 'little_adventurer',
-    name: 'Rose',
+    name: 'Rose Blossom',
     title: 'Kind Friend',
     tagline: 'Gentle friend who loves sweet meadow stories and quiet paths.',
     personality: 'Warm-hearted, gentle, caring, and loves peaceful adventures.',
     badge: '🌷',
     avatarEmoji: '👧',
-    themeColor: '#F43F5E', // Rose Coral
+    themeColor: '#F43F5E',
     secondaryColor: '#FFF1F2',
     accentColor: '#FBBF24',
-    outfitDescription: 'Cozy pink-and-lilac dress with golden trims, golden flower hairpin, and trail boots.',
+    outfitDescription: 'Cozy rose dress with golden trims and flower hairpins.',
     favoriteActivity: 'Reading storybooks at the Story Pavilion.',
-    voiceGreeting: 'Hello sweet friend! I am Rose! Let’s share a wonderful adventure!',
+    voiceGreeting: 'Hello sweet friend! I’m so excited to play with you!',
     genderStyle: 'girl'
   }
 ];

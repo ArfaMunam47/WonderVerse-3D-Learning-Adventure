@@ -282,34 +282,48 @@ class AudioManager {
     this.currentSongTimeouts = [];
   }
 
-  // Polite, cute anime/cartoon child voice narration
-  public speakCuteAnimeChild(text = "Hey, let's explore!", force = true, onEnd?: () => void) {
-    if ((!this.soundEnabled && !force) || !('speechSynthesis' in window)) {
+  // Polite, cute child voice narration with consistent female voice and strict overlap prevention
+  public speakCuteAnimeChild(text = "Hey! Welcome to Wonder Meadow! Let's learn and explore together!", force = false, onEnd?: () => void) {
+    if (!this.soundEnabled || !('speechSynthesis' in window)) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    // Prevent overlapping speech tracks
+    if (this.isSpeaking && !force) {
       if (onEnd) onEnd();
       return;
     }
 
     try {
-      window.speechSynthesis.cancel(); // Stop any pending utterance
+      window.speechSynthesis.cancel(); // Stop any pending utterance cleanly
       const utterance = new SpeechSynthesisUtterance(text);
-      // High pitch and cheerful cadence for cute anime/cartoon child voice
-      utterance.pitch = 1.45;
-      utterance.rate = 1.05;
+      // Soft, gentle, comforting child voice parameters
+      utterance.volume = 0.72;
+      utterance.pitch = 1.25;
+      utterance.rate = 0.90;
 
       const voices = window.speechSynthesis.getVoices();
-      // Look for natural, cheerful, higher-pitched feminine or kid voices
+      // Strict selection for soft, warm feminine / child-friendly voices (excluding male/harsh voices)
       const preferred = voices.find(v => (
         v.lang.startsWith('en') && (
-          v.name.includes('Victoria') ||
           v.name.includes('Samantha') ||
-          v.name.includes('Google US English') ||
-          v.name.includes('Zira') ||
+          v.name.includes('Victoria') ||
           v.name.includes('Karen') ||
           v.name.includes('Flo') ||
+          v.name.includes('Zira') ||
+          v.name.includes('Google US English') ||
           v.name.includes('Natural') ||
           v.name.includes('Female')
         )
-      )) || voices.find(v => v.lang.startsWith('en'));
+      )) || voices.find(v => (
+        v.lang.startsWith('en') &&
+        !v.name.toLowerCase().includes('male') &&
+        !v.name.toLowerCase().includes('david') &&
+        !v.name.toLowerCase().includes('george') &&
+        !v.name.toLowerCase().includes('mark') &&
+        !v.name.toLowerCase().includes('guy')
+      ));
 
       if (preferred) {
         utterance.voice = preferred;

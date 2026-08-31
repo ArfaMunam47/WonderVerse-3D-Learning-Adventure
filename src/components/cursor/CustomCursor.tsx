@@ -1,22 +1,22 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * WONDERMIDO - Small, Polished, Playful Game Cursor
+ * CustomCursor - Wonder Meadow Friendly Pointer
  *
  * Characteristics:
- * - High performance: Direct transform updates on passive mouse events (0 CPU when idle)
- * - Compact & non-intrusive (never covers text or important content)
- * - Precise hot-spot tip at (0, 0)
- * - Playful game-style star-arrow design with warm golden/amber glow
- * - Instant hover reactions (gentle scale, soft sparkle, warm aura expansion)
- * - Automatically disabled on touch/mobile devices
+ * - Ultra-lightweight & silky smooth (0 CPU overhead when idle)
+ * - Unified Wonder Meadow Palette: Meadow green (#4A7C59, #6C9E78), soft ivory (#FFFDF9), warm gold center (#F6C844), slate outline (#23272F)
+ * - Hot-spot tip at (0, 0)
+ * - Subtle aura scale when hovering interactive elements
+ * - Gentle sparkle reaction over character stage
+ * - Auto-disabled on mobile/touch screens
  */
 export const CustomCursor: React.FC = () => {
   const cursorRef = useRef<HTMLDivElement>(null);
   const auraRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Touch/mobile device guard - do not activate custom cursor on touch
+    // Touch/mobile guard - custom cursor is purely for fine pointer devices
     if (typeof window !== 'undefined') {
       const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
       if (isTouch) return;
@@ -28,6 +28,7 @@ export const CustomCursor: React.FC = () => {
 
     let isVisible = false;
     let isHoveringInteractive = false;
+    let isHoveringHero = false;
     let isHidden = false;
 
     const onMouseMove = (e: MouseEvent) => {
@@ -43,10 +44,9 @@ export const CustomCursor: React.FC = () => {
         auraEl.style.opacity = '1';
       }
 
-      // Check if hovering over interactive element
       const target = e.target as HTMLElement | null;
       if (target) {
-        // Text input field check - hide cursor to allow native I-beam
+        // Hide on text inputs
         const isInput = !!target.closest('input, textarea, [contenteditable="true"]');
         if (isInput) {
           if (!isHidden) {
@@ -61,7 +61,21 @@ export const CustomCursor: React.FC = () => {
           auraEl.style.opacity = '1';
         }
 
-        const interactive = !!target.closest('button, a, [role="button"], input[type="button"], .cursor-pointer, [data-interactive="true"]');
+        // Check if hovering character
+        const hero = !!target.closest('#hero-character-touch-target, #hero-character-meadow-stage');
+        if (hero !== isHoveringHero) {
+          isHoveringHero = hero;
+          if (isHoveringHero) {
+            cursorEl.classList.add('cursor-hero-hover');
+            auraEl.classList.add('aura-hero-hover');
+          } else {
+            cursorEl.classList.remove('cursor-hero-hover');
+            auraEl.classList.remove('aura-hero-hover');
+          }
+        }
+
+        // Check if hovering buttons / interactive
+        const interactive = !hero && !!target.closest('button, a, [role="button"], input[type="button"], .cursor-pointer, [data-interactive="true"]');
         if (interactive !== isHoveringInteractive) {
           isHoveringInteractive = interactive;
           if (isHoveringInteractive) {
@@ -116,16 +130,14 @@ export const CustomCursor: React.FC = () => {
 
   return (
     <>
-      {/* Dynamic Cursor Styles */}
       <style>{`
-        /* Hide native cursor on desktop fine-pointer devices */
         @media (pointer: fine) {
           body, button, a, [role="button"], input[type="button"], select, .cursor-pointer {
             cursor: none !important;
           }
         }
 
-        #wondermido-game-cursor {
+        #wonder-meadow-game-cursor {
           position: fixed;
           top: 0;
           left: 0;
@@ -139,93 +151,104 @@ export const CustomCursor: React.FC = () => {
           will-change: transform, opacity;
         }
 
-        #wondermido-game-cursor.cursor-hover-active {
-          scale: 1.18;
-          filter: drop-shadow(0 2px 6px rgba(245, 158, 11, 0.65));
+        #wonder-meadow-game-cursor.cursor-hover-active {
+          scale: 1.12;
+          filter: drop-shadow(0 2px 6px rgba(74, 124, 89, 0.4));
         }
 
-        #wondermido-game-cursor.cursor-click-active {
+        #wonder-meadow-game-cursor.cursor-hero-hover {
+          scale: 1.15;
+          filter: drop-shadow(0 2px 8px rgba(246, 200, 68, 0.5));
+        }
+
+        #wonder-meadow-game-cursor.cursor-click-active {
           scale: 0.92;
         }
 
-        #wondermido-cursor-aura {
+        #wonder-meadow-cursor-aura {
           position: fixed;
           top: -10px;
           left: -10px;
           width: 20px;
           height: 20px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, rgba(245, 158, 11, 0.12) 60%, transparent 100%);
+          background: radial-gradient(circle, rgba(129, 176, 140, 0.28) 0%, rgba(74, 124, 89, 0.08) 60%, transparent 100%);
           pointer-events: none;
           z-index: 999998;
           opacity: 0;
-          transition: opacity 0.2s ease, width 0.25s ease, height 0.25s ease, top 0.25s ease, left 0.25s ease, background 0.25s ease;
+          transition: opacity 0.2s ease, width 0.22s ease, height 0.22s ease, top 0.22s ease, left 0.22s ease, background 0.22s ease;
           will-change: transform, opacity;
         }
 
-        #wondermido-cursor-aura.aura-hover-active {
+        #wonder-meadow-cursor-aura.aura-hover-active {
+          top: -15px;
+          left: -15px;
+          width: 30px;
+          height: 30px;
+          background: radial-gradient(circle, rgba(129, 176, 140, 0.45) 0%, rgba(74, 124, 89, 0.15) 65%, transparent 100%);
+        }
+
+        #wonder-meadow-cursor-aura.aura-hero-hover {
           top: -16px;
           left: -16px;
           width: 32px;
           height: 32px;
-          background: radial-gradient(circle, rgba(251, 191, 36, 0.55) 0%, rgba(245, 158, 11, 0.2) 65%, transparent 100%);
+          background: radial-gradient(circle, rgba(246, 200, 68, 0.45) 0%, rgba(129, 176, 140, 0.2) 65%, transparent 100%);
         }
 
-        #wondermido-cursor-aura.aura-click-active {
-          top: -8px;
-          left: -8px;
-          width: 16px;
-          height: 16px;
-          background: radial-gradient(circle, rgba(245, 158, 11, 0.7) 0%, transparent 100%);
+        #wonder-meadow-cursor-aura.aura-click-active {
+          top: -6px;
+          left: -6px;
+          width: 12px;
+          height: 12px;
+          background: radial-gradient(circle, rgba(74, 124, 89, 0.5) 0%, transparent 100%);
         }
       `}</style>
 
-      {/* Subtle Glowing Aura */}
-      <div id="wondermido-cursor-aura" ref={auraRef} aria-hidden="true" />
+      {/* Gentle Soft Aura */}
+      <div id="wonder-meadow-cursor-aura" ref={auraRef} aria-hidden="true" />
 
-      {/* Small, Polished Game Cursor (Precise Star Pointer Arrow) */}
-      <div id="wondermido-game-cursor" ref={cursorRef} aria-hidden="true">
+      {/* Unified Picture-Book Pointer */}
+      <div id="wonder-meadow-game-cursor" ref={cursorRef} aria-hidden="true">
         <svg
           viewBox="0 0 24 24"
-          className="w-full h-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] overflow-visible"
+          className="w-full h-full drop-shadow-[0_2px_3px_rgba(35,39,47,0.18)] overflow-visible"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            {/* Shiny Amber / Gold Gradient */}
-            <linearGradient id="cursorBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FFFBEB" />
-              <stop offset="35%" stopColor="#FDE047" />
-              <stop offset="75%" stopColor="#F59E0B" />
-              <stop offset="100%" stopColor="#D97706" />
+            <linearGradient id="wmCursorBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FFFDF9" />
+              <stop offset="45%" stopColor="#E2F0E6" />
+              <stop offset="90%" stopColor="#5A8E67" />
+              <stop offset="100%" stopColor="#4A7C59" />
             </linearGradient>
-            {/* Dark Outline for high contrast on all backgrounds */}
-            <linearGradient id="cursorStrokeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#78350F" />
-              <stop offset="100%" stopColor="#451A03" />
+            <linearGradient id="wmCursorStrokeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2D3139" />
+              <stop offset="100%" stopColor="#1E293B" />
             </linearGradient>
           </defs>
 
-          {/* Precise Game Arrow / Pointer Path */}
+          {/* Smooth Rounded Pointer Body */}
           <path
-            d="M 1.5 1.5 L 8.5 20.5 L 12.2 13.2 L 19.5 10.5 Z"
-            fill="url(#cursorBodyGrad)"
-            stroke="url(#cursorStrokeGrad)"
-            strokeWidth="1.6"
+            d="M 2 2 L 8.5 20.5 L 12.2 13.2 L 19.5 10.5 Z"
+            fill="url(#wmCursorBodyGrad)"
+            stroke="url(#wmCursorStrokeGrad)"
+            strokeWidth="1.5"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
 
-          {/* Clean Inner Highlight */}
+          {/* Soft Highlight */}
           <path
-            d="M 3.2 3.8 L 7.5 15.5 L 9.8 11.2 L 15.2 9.2 Z"
-            fill="#FFFBEB"
-            fillOpacity="0.65"
+            d="M 3.8 4.2 L 7.6 15.2 L 9.8 11.2 L 15.2 9.2 Z"
+            fill="#FFFDF9"
+            fillOpacity="0.8"
           />
 
-          {/* Cute Mini Star Sparkle Gem at Center */}
-          <circle cx="11" cy="11" r="1.6" fill="#FFFFFF" />
-          <circle cx="11" cy="11" r="0.9" fill="#D97706" />
+          {/* Centered Gentle Dot */}
+          <circle cx="11.5" cy="11.5" r="1.3" fill="#FFFFFF" />
+          <circle cx="11.5" cy="11.5" r="0.7" fill="#4A7C59" />
         </svg>
       </div>
     </>

@@ -1,7 +1,8 @@
-import React from 'react';
-import { Sparkles, Shield, Volume2, VolumeX } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Shield, Volume2, VolumeX, Eye, BookOpen, Compass, ArrowRight } from 'lucide-react';
 import { audioService } from '../../utils/audio';
-import { WelcomeKidVisual } from './WelcomeKidVisual';
+import { MeadowEnvironmentBackdrop } from './MeadowEnvironmentBackdrop';
+import { HeroCharacterMeadow } from './HeroCharacterMeadow';
 
 interface WelcomeScreenProps {
   onStartAdventure: () => void;
@@ -12,146 +13,95 @@ interface WelcomeScreenProps {
   onToggleReducedMotion?: () => void;
 }
 
+/**
+ * WelcomeScreen - Wonder Meadow
+ *
+ * UNIFIED DESIGN SYSTEM:
+ * - 60% Warm Cream / Soft Ivory background (#FAF7F0)
+ * - 25% Soft Sky Blue atmosphere (#DCEEF8, #EBF5FB)
+ * - 10% Gentle Meadow Sage Green (#4A7C59, #5A8E67, #6C9E78)
+ * - 5% Warm Sunshine Highlights (#F6C844, #FDE68A)
+ * - Natural warm wood / charcoal text (#23272F)
+ *
+ * CLEAR HIERARCHY:
+ * 1. Wonder Meadow Logo (spacious, high-contrast, no cloud overlap)
+ * 2. Hero Character (alive with gentle breathing & welcoming voice)
+ * 3. Primary "Start Exploring" CTA (meadow green theme, tactile & clear)
+ * 4. Secondary Controls (Sound, Parents, Motion)
+ * 5. Environment
+ */
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onStartAdventure,
   onOpenParentArea,
   soundEnabled,
   onToggleSound,
-  reducedMotion = false
+  reducedMotion = false,
+  onToggleReducedMotion
 }) => {
+  const [isTalking, setIsTalking] = useState(false);
+
   return (
     <div
       id="wonder-meadow-welcome-screen"
-      className="relative w-full h-[100dvh] max-h-[100dvh] flex flex-col justify-between overflow-hidden select-none bg-gradient-to-b from-[#E0F2FE] via-[#FFFDF5] to-[#F1F8F5] px-3 sm:px-6 md:px-8 py-3 sm:py-4"
+      className="relative w-full h-[100dvh] max-h-[100dvh] flex flex-col justify-between overflow-hidden select-none bg-[#FAF7F0] px-4 sm:px-6 md:px-8 py-3 sm:py-4"
     >
       {/* ========================================================================= */}
-      {/* 1. LIVING MEADOW & SKY ENVIRONMENT (Background only, 0 collision risk)   */}
+      {/* 1. SOFT MEADOW BACKDROP ENVIRONMENT (Minimal & Warm)                      */}
       {/* ========================================================================= */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        {/* Soft Multi-Tier Rolling Meadow Hills */}
-        <svg
-          viewBox="0 0 1440 320"
-          className="absolute bottom-0 left-0 right-0 w-full h-[20vh] min-h-[80px] max-h-[140px] object-cover pointer-events-none opacity-80"
-          preserveAspectRatio="none"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M0,150 C360,100 680,200 1020,130 C1240,85 1380,140 1440,120 L1440,320 L0,320 Z"
-            fill="#E0F2FE"
-            fillOpacity="0.4"
-          />
-          <path
-            d="M0,185 C320,145 560,225 880,170 C1140,125 1320,195 1440,165 L1440,320 L0,320 Z"
-            fill="#BBF7D0"
-            fillOpacity="0.5"
-          />
-          <path
-            d="M0,235 C340,195 620,265 940,215 C1200,175 1360,235 1440,220 L1440,320 L0,320 Z"
-            fill="#86EFAC"
-            fillOpacity="0.45"
-          />
-        </svg>
-
-        {/* Floating Living Butterflies in the Meadow Atmosphere */}
-        {!reducedMotion && (
-          <>
-            <div className="absolute top-[16%] left-[10%] animate-butterfly-1 opacity-75">
-              <span className="text-base sm:text-xl filter drop-shadow-xs">🦋</span>
-            </div>
-            <div className="absolute top-[32%] right-[12%] animate-butterfly-2 opacity-70">
-              <span className="text-sm sm:text-lg filter drop-shadow-xs">🦋</span>
-            </div>
-            <div className="absolute top-[50%] left-[22%] animate-butterfly-1 opacity-60">
-              <span className="text-xs sm:text-sm filter drop-shadow-xs">✨</span>
-            </div>
-          </>
-        )}
-
-        {/* Warm Ground Horizon Light Bloom */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 sm:h-20 bg-gradient-to-t from-emerald-100/35 via-amber-50/20 to-transparent" />
-      </div>
+      <MeadowEnvironmentBackdrop reducedMotion={reducedMotion} />
 
       {/* ========================================================================= */}
-      {/* 2. TOP NAVIGATION: DEDICATED FIXED ZONE (Clear separation from Hero)       */}
+      {/* 2. TOP HEADER: LOGO WITH BREATHING ROOM + SECONDARY CONTROLS             */}
       {/* ========================================================================= */}
-      <header className="relative z-30 w-full max-w-6xl mx-auto flex items-center justify-between gap-3 shrink-0 pb-2 sm:pb-3 border-b border-stone-200/40">
-        {/* Top Left: Animated Living Sun & Wonder Meadow Branding */}
-        <div className="flex items-center gap-2.5 sm:gap-3.5">
-          {/* Continuous Moving Sun (Rotates slowly, breathes, bobs smoothly) */}
+      <header className="relative z-30 w-full max-w-5xl mx-auto flex items-center justify-between gap-3 shrink-0 pb-2 border-b border-[#E2E8F0]/70">
+        {/* Brand Logo Mark */}
+        <div className="flex items-center gap-2.5">
           <div
-            id="welcome-living-sun"
-            onClick={() => {
-              audioService.playSparkle();
-            }}
-            className={`relative w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 flex items-center justify-center shrink-0 cursor-pointer group ${
-              reducedMotion ? '' : 'animate-sun-bob'
-            }`}
+            id="welcome-brand-badge"
+            onClick={() => audioService.playSparkle()}
+            className="w-10 h-10 rounded-2xl bg-[#4A7C59] hover:bg-[#3D6849] text-[#FAF7F0] flex items-center justify-center shadow-xs cursor-pointer active:scale-95 transition-all duration-200"
             role="button"
             tabIndex={0}
-            aria-label="Bright smiling Wonder Meadow Sun"
-            title="Click the smiling sun!"
+            aria-label="Wonder Meadow Brand Badge"
+            title="Wonder Meadow"
           >
-            {/* Warm Atmospheric Glowing Halo */}
-            <div
-              className={`absolute inset-0 rounded-full bg-gradient-to-br from-amber-300/50 via-yellow-200/35 to-transparent blur-md ${
-                reducedMotion ? '' : 'animate-sun-glow-breathe'
-              }`}
-            />
-
-            {/* Outer Slow Continuously Rotating Rays (16s smooth loop) */}
-            <svg
-              viewBox="0 0 100 100"
-              className={`absolute inset-0 w-full h-full text-amber-400/80 drop-shadow-xs ${
-                reducedMotion ? '' : 'animate-sun-spin-slow'
-              }`}
-              fill="currentColor"
-            >
-              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
-                <polygon
-                  key={deg}
-                  points="50,4 46,15 54,15"
-                  transform={`rotate(${deg} 50 50)`}
-                />
-              ))}
-            </svg>
-
-            {/* Inner Counter-Spinning Secondary Soft Beams (22s loop) */}
-            <svg
-              viewBox="0 0 100 100"
-              className={`absolute inset-0 w-full h-full text-yellow-300/60 ${
-                reducedMotion ? '' : 'animate-sun-counter-spin'
-              }`}
-              fill="currentColor"
-            >
-              {[15, 45, 75, 105, 135, 165, 195, 225, 255, 285, 315, 345].map((deg) => (
-                <polygon
-                  key={deg}
-                  points="50,9 47,17 53,17"
-                  transform={`rotate(${deg} 50 50)`}
-                />
-              ))}
-            </svg>
-
-            {/* Cheerful Golden Sun Core */}
-            <div className="relative z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-yellow-200 via-amber-300 to-amber-400 shadow-md border-2 border-white flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="text-xs sm:text-sm select-none">☀️</span>
-            </div>
+            <Compass className="w-5 h-5 text-[#FAF7F0]" />
           </div>
 
-          {/* Wonder Meadow Branding Logo Text */}
           <div className="flex flex-col">
-            <span className="font-sans font-black text-sm sm:text-base md:text-lg text-stone-900 tracking-tight leading-none">
-              Wonder<span className="text-amber-500">Meadow</span>
+            <span className="font-display font-black text-lg sm:text-xl text-[#23272F] tracking-tight leading-none">
+              Wonder<span className="text-[#4A7C59]">Meadow</span>
             </span>
-            <span className="text-[10px] sm:text-[11px] font-bold text-amber-800 tracking-wider uppercase opacity-85">
-              Kids Adventure
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#525F72] tracking-wider uppercase">
+              Joyful Learning World
             </span>
           </div>
         </div>
 
-        {/* Top Right: Sound & Parents Controls (Clean, Protected Top Sanctuary) */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        {/* Top Right: Calm Mode, Sound, and Parent Area Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Calm Mode Toggle */}
+          {onToggleReducedMotion && (
+            <button
+              type="button"
+              id="welcome-motion-toggle-btn"
+              onClick={() => {
+                onToggleReducedMotion();
+                audioService.playPop();
+              }}
+              className={`min-h-[38px] h-9 sm:h-10 px-3 rounded-2xl border shadow-xs flex items-center gap-1.5 text-xs font-sans font-bold cursor-pointer active:scale-95 transition-all duration-200 ${
+                reducedMotion
+                  ? 'bg-[#E2E8F0] text-[#1E293B] border-[#CBD5E1]'
+                  : 'bg-white/90 text-[#475569] hover:bg-white border-[#E2E8F0]'
+              }`}
+              title={reducedMotion ? 'Calm motion active' : 'Turn on calm motion'}
+              aria-label="Toggle calm motion mode"
+            >
+              <Eye className="w-3.5 h-3.5 text-[#525F72] shrink-0" />
+              <span className="hidden md:inline">{reducedMotion ? 'Calm Mode' : 'Motion'}</span>
+            </button>
+          )}
+
           {/* Sound Toggle */}
           <button
             type="button"
@@ -160,19 +110,19 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               onToggleSound();
               audioService.playPop();
             }}
-            className="min-h-[38px] h-9 sm:h-10 px-3 sm:px-3.5 rounded-full bg-white/95 hover:bg-white text-stone-700 border border-stone-200/90 shadow-xs hover:shadow-sm flex items-center justify-center gap-1.5 text-xs sm:text-sm font-sans font-bold cursor-pointer active:scale-95 transition-all focus-visible:ring-3 focus-visible:ring-amber-400"
+            className="min-h-[38px] h-9 sm:h-10 px-3 sm:px-3.5 rounded-2xl bg-white/90 hover:bg-white text-[#334155] border border-[#E2E8F0] shadow-xs flex items-center justify-center gap-1.5 text-xs sm:text-sm font-sans font-bold cursor-pointer active:scale-95 transition-all duration-200"
             title={soundEnabled ? 'Mute audio' : 'Turn on audio'}
             aria-label={soundEnabled ? 'Sound is on. Click to mute' : 'Sound is off. Click to turn on'}
           >
             {soundEnabled ? (
-              <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+              <Volume2 className="w-4 h-4 text-[#4A7C59] shrink-0" />
             ) : (
-              <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-400 shrink-0" />
+              <VolumeX className="w-4 h-4 text-[#94A3B8] shrink-0" />
             )}
             <span className="hidden sm:inline font-sans">{soundEnabled ? 'Sound' : 'Muted'}</span>
           </button>
 
-          {/* Parents Area Access Button */}
+          {/* Parents Area Button */}
           <button
             type="button"
             id="welcome-parent-area-btn"
@@ -180,39 +130,45 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               audioService.playPop();
               onOpenParentArea();
             }}
-            className="min-h-[38px] h-9 sm:h-10 px-3.5 sm:px-4 rounded-full bg-white/95 hover:bg-white text-stone-800 hover:text-stone-950 border border-stone-200/90 shadow-xs hover:shadow-sm flex items-center gap-1.5 text-xs sm:text-sm font-sans font-bold cursor-pointer active:scale-95 transition-all focus-visible:ring-3 focus-visible:ring-amber-400"
-            title="Parents Area (Settings & Progress)"
+            className="min-h-[38px] h-9 sm:h-10 px-3.5 sm:px-4 rounded-2xl bg-white/90 hover:bg-white text-[#334155] border border-[#E2E8F0] shadow-xs flex items-center gap-1.5 text-xs sm:text-sm font-sans font-bold cursor-pointer active:scale-95 transition-all duration-200"
+            title="Parents Area (Settings & Learning Progress)"
             aria-label="Open Parents Area"
           >
-            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 shrink-0" />
+            <Shield className="w-4 h-4 text-[#4A7C59] shrink-0" />
             <span className="font-sans font-extrabold tracking-wide">Parents</span>
           </button>
         </div>
       </header>
 
       {/* ========================================================================= */}
-      {/* 3. HERO CONTENT: GUARANTEED BELOW HEADER WITH AMPLE VERTICAL BUFFER       */}
+      {/* 3. HERO CONTENT: CHARACTER STAGE + START EXPLORING CTA                    */}
       {/* ========================================================================= */}
-      <main className="relative z-10 w-full max-w-6xl mx-auto my-auto flex-1 flex flex-col md:flex-row items-center md:items-end justify-between gap-6 sm:gap-8 lg:gap-12 pt-3 sm:pt-6 pb-2 min-h-0">
+      <main className="relative z-10 w-full max-w-5xl mx-auto my-auto flex-1 flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-10 pt-2 pb-2 min-h-0">
         
-        {/* LEFT COLUMN: TITLE, INVITATION SUBTITLE, PRIMARY "LET'S EXPLORE" BUTTON */}
-        <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left self-center shrink-0 max-w-md lg:max-w-xl">
+        {/* LEFT COLUMN: TITLE, REASSURANCE & PRIMARY CALL TO ACTION */}
+        <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left self-center shrink-0 max-w-md lg:max-w-lg">
           
-          {/* Main Title: WONDER MEADOW (Crisp, High-Contrast Typography) */}
+          {/* Subtle Warm Community Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/85 border border-[#E2E8F0] text-[#334155] text-xs sm:text-sm font-bold mb-3 shadow-2xs backdrop-blur-xs">
+            <Sparkles className="w-3.5 h-3.5 text-[#5A8E67]" />
+            <span>Joyful Inclusive Learning World</span>
+          </div>
+
+          {/* Main Title */}
           <h1
             id="wonder-meadow-main-title"
-            className="text-3xl xs:text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.06] text-stone-900 drop-shadow-xs font-sans mb-2 sm:mb-3"
+            className="font-display text-3xl xs:text-4xl sm:text-5xl font-black tracking-tight leading-[1.08] text-[#23272F] mb-3"
           >
-            WONDER <span className="text-amber-500">MEADOW</span>
+            Wonder <span className="text-[#4A7C59]">Meadow</span>
           </h1>
 
-          {/* Warm Kid-Friendly Subtitle */}
-          <p className="text-xs xs:text-sm sm:text-base md:text-lg text-stone-700 font-medium max-w-sm sm:max-w-md mb-4 sm:mb-6 lg:mb-8 leading-relaxed">
-            A magical world of playful discovery, friendly animal buddies, and joyful adventures!
+          {/* Subtitle */}
+          <p className="text-sm xs:text-base sm:text-lg text-[#525F72] font-medium max-w-md mb-6 leading-relaxed">
+            A gentle, joyful space designed for curiosity, friendship, and learning for children of all abilities.
           </p>
 
-          {/* Primary Action Button: "Let's Explore" */}
-          <div className="w-full flex justify-center md:justify-start">
+          {/* Primary Action Button: "Start Exploring" (Unified Meadow Green & Warm Cream) */}
+          <div className="w-full flex flex-col items-center md:items-start gap-2.5">
             <button
               type="button"
               id="welcome-start-adventure-btn"
@@ -220,32 +176,40 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 audioService.playSparkle();
                 onStartAdventure();
               }}
-              className="group relative w-full sm:w-auto min-w-[240px] xs:min-w-[260px] sm:min-w-[290px] min-h-[52px] xs:min-h-[56px] sm:min-h-[62px] px-8 sm:px-10 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-300 hover:via-amber-400 hover:to-orange-400 text-amber-950 font-black text-lg xs:text-xl sm:text-2xl tracking-wide shadow-[0_8px_24px_rgba(245,158,11,0.38)] hover:shadow-[0_12px_32px_rgba(245,158,11,0.5)] active:scale-98 transition-all duration-200 border-2 border-white flex items-center justify-center gap-3 cursor-pointer focus:outline-none focus:ring-4 focus:ring-amber-300"
-              aria-label="Let's Explore Wonder Meadow"
+              className="group relative w-full sm:w-auto min-w-[240px] xs:min-w-[260px] sm:min-w-[280px] min-h-[54px] xs:min-h-[58px] px-8 sm:px-10 rounded-3xl bg-gradient-to-r from-[#4A7C59] to-[#3D6849] hover:from-[#528A63] hover:to-[#447451] text-[#FAF7F0] font-extrabold text-lg sm:text-xl tracking-wide shadow-[0_6px_20px_rgba(74,124,89,0.28)] hover:shadow-[0_10px_26px_rgba(74,124,89,0.38)] active:scale-98 transition-all duration-200 border-2 border-[#81B08C]/40 flex items-center justify-center gap-3 cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#81B08C]/40"
+              aria-label="Start Exploring - Enter Wonder Meadow learning world"
             >
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-amber-900 group-hover:rotate-12 transition-transform duration-300 shrink-0" />
-              <span className="font-sans font-black whitespace-nowrap">Let's Explore</span>
-              <span className="text-base sm:text-lg group-hover:scale-125 transition-transform">🎒</span>
+              <BookOpen className="w-5 h-5 text-[#FAF7F0] group-hover:scale-110 transition-transform" />
+              <span className="font-display font-black text-[#FAF7F0] whitespace-nowrap">
+                Start Exploring
+              </span>
+              <ArrowRight className="w-4 h-4 text-[#C2E0CC] group-hover:translate-x-1 transition-transform" />
             </button>
+
+            {/* Reassurance Label */}
+            <div className="flex items-center gap-2 mt-1 text-xs text-[#525F72] font-semibold">
+              <span>🌸 100% Ad-Free</span>
+              <span>•</span>
+              <span>💛 Safe & Inclusive</span>
+            </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: 3D FLOATING ISLAND WITH ANIME EXPLORER (ANCHORED IN LOWER HALF) */}
-        <div className="w-full md:w-1/2 flex items-end justify-center md:justify-end self-end shrink-0 min-h-0">
-          <div className="relative w-full max-w-[250px] xs:max-w-[280px] sm:max-w-[340px] md:max-w-[390px] lg:max-w-[440px] h-[210px] xs:h-[240px] sm:h-[300px] md:h-[350px] lg:h-[390px] flex items-end justify-center">
-            <WelcomeKidVisual
-              reducedMotion={reducedMotion}
-              className="w-full h-full"
-            />
-          </div>
+        {/* RIGHT COLUMN: LIVING APPROVED HERO CHARACTER ON MEADOW PLATFORM */}
+        <div className="w-full md:w-1/2 flex items-center justify-center self-center shrink-0 min-h-0">
+          <HeroCharacterMeadow
+            reducedMotion={reducedMotion}
+            className="w-full"
+            onTalkingStateChange={setIsTalking}
+          />
         </div>
       </main>
 
       {/* ========================================================================= */}
-      {/* 4. CLEAN BOTTOM FOOTER                                                     */}
+      {/* 4. REASSURING FOOTER                                                      */}
       {/* ========================================================================= */}
-      <footer className="relative z-20 w-full max-w-5xl mx-auto flex items-center justify-center text-stone-500 text-[11px] sm:text-xs font-semibold shrink-0 py-0.5 sm:py-1 text-center">
-        <span className="opacity-80">🌸 Safe, gentle, and ad-free play for curious young minds</span>
+      <footer className="relative z-20 w-full max-w-5xl mx-auto flex items-center justify-center text-[#525F72] text-xs font-medium shrink-0 py-1 text-center">
+        <span>Welcoming all children, with and without developmental differences</span>
       </footer>
     </div>
   );

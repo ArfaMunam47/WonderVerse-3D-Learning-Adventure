@@ -15,11 +15,14 @@ const PORT = 3000;
 app.use(express.json({ limit: '100kb' }));
 
 // ----------------------------------------------------
-// HTTP HEADERS MIDDLEWARE
+// HTTP HEADERS & DEFENSE-IN-DEPTH MIDDLEWARE
 // ----------------------------------------------------
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   next();
 });
 
